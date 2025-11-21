@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>云盘站点 - SSO 演示</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+      body { font-family: "Segoe UI", sans-serif; margin:0; background:#0f172a; color:#e2e8f0; }
+      header { padding: 16px 24px; background:#0b1220; }
+      main { padding: 24px; max-width: 960px; margin:auto; }
+      .card { background: #111827; border: 1px solid #1e293b; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 10px 24px rgba(0,0,0,0.35); }
+      input, button { padding: 8px 10px; font-size: 14px; border-radius: 8px; border: 1px solid #1e293b; }
+      input { background:#0b1220; color:#e2e8f0; }
+      button { background:#10b981; color:#0b1220; border:none; cursor:pointer; }
+      button.secondary { background:#22d3ee; }
+      button:disabled { opacity:0.6; cursor: not-allowed; }
+      .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:12px; }
+      ul { list-style:none; padding:0; }
+      li { padding:8px 0; border-bottom:1px dashed #1e293b; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h2>云盘站点 · OAuth2.0 SSO</h2>
+    </header>
+    <main id="app">
+      <div class="card">
+        <h3>登录 & 授权</h3>
+        <div class="grid">
+          <div>
+            <label>用户名</label><br />
+            <input v-model="username" placeholder="alice" />
+          </div>
+          <div>
+            <label>密码</label><br />
+            <input type="password" v-model="password" placeholder="password123" />
+          </div>
+        </div>
+        <p>Session: {{ sessionToken || "无" }}</p>
+        <button @click="login" :disabled="loading">登录获取 session</button>
+        <button class="secondary" @click="fullFlow" :disabled="loading">一键授权 + 换令牌</button>
+      </div>
+
+      <div class="card">
+        <h3>云盘文件</h3>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <button @click="listFiles" :disabled="!accessToken || loading">列出文件</button>
+          <button @click="uploadFile" :disabled="!accessToken || loading">模拟上传</button>
+          <button @click="logout">清除令牌</button>
+        </div>
+        <ul>
+          <li v-for="f in files" :key="f.name">
+            {{ f.name }} — {{ f.size }} — {{ f.uploaded_at }}
+          </li>
+        </ul>
+      </div>
+    </main>
+
+    <script>
+      const { createApp } = Vue;
+      createApp({
+        data() {
+          return {
+            authBase: "https://localhost:5000",
+            apiBase: "https://localhost:5002",
+            username: "alice",
+            password: "password123",
+            sessionToken: localStorage.getItem("cloud_session") || "",
+            accessToken: localStorage.getItem("cloud_access") || "",
+            refreshToken: localStorage.getItem("cloud_refresh") || "",
+            files: [],
+            loading: false,
+          };
+        },
+        methods: {
+          async login() {
+            this.loading = true;
+            try {
+              const res = await fetch(`${this.authBase}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: this.username, password: this.password }),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || "login failed");
+              this.sessionToken = data.session_token;
+              localStorage.setItem("cloud_session", this.sessionToken);
+            } catch (e) {
+              alert(e.message);
+            } finally {
+              this.loading = false;
+            }
+          },
+          async fullFlow() {
+            if (!this.sessionToken) await this.login();
+            await this.authorize();
+            await this.exchange();
+          },
+          async authorize() {
+            const url = `${this.authBase}/auth/authorize?response_type=code&client_id=cloud-app&redirect_uri=${encodeURIComponent("https://localhost:4173/cloud.html#callback")}&state=cloud`;
+            const res = await fetch(url, { headers: { "X-Session-Token": this.sessionToken } });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "authorize failed");
+            const params = new URL(data.redirect_uri).searchParams;
+            this.code = params.get("code");
+          },
+          async exchange() {
+            if (!this.code) return;
+            const res = await fetch(`${this.apiBase}/exchange`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ code: this.code }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "exchange failed");
+            this.accessToken = data.access_token;
+            this.refreshToken = data.refresh_token;
+            localStorage.setItem("cloud_access", this.accessToken);
+            localStorage.setItem("cloud_refresh", this.refreshToken);
+          },
+          async listFiles() {
+            const res = await fetch(`${this.apiBase}/files`, {
+              headers: { Authorization: `Bearer ${this.accessToken}` },
+            });
+            const data = await res.json();
+            if (!res.ok) { alert(JSON.stringify(data)); return; }
+            this.files = data.files || [];
+          },
+          async uploadFile() {
+            const res = await fetch(`${this.apiBase}/files`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.accessToken}` },
+              body: JSON.stringify({ name: `report-${Date.now()}.pdf`, size: "4KB" }),
+            });
+            const data = await res.json();
+            if (!res.ok) { alert(JSON.stringify(data)); return; }
+            this.files = data.files || [];
+          },
+          logout() {
+            this.accessToken = "";
+            this.refreshToken = "";
+            localStorage.removeItem("cloud_access");
+            localStorage.removeItem("cloud_refresh");
+          },
+        },
+      }).mount("#app");
+    </script>
+  </body>
+</html>

@@ -1,0 +1,6 @@
+*.crt
+*.key
+*.srl
+*.csr
+*.ext
+__pycache__/

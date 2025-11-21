@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>统一身份认证门户</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+      body { font-family: "Segoe UI", sans-serif; background:#f5f7fb; margin:0; color:#1f2937; }
+      header { background:#111827; color:#e5e7eb; padding: 18px 24px; }
+      main { max-width: 900px; margin:auto; padding: 20px; }
+      .card { background:#fff; border-radius: 12px; box-shadow: 0 8px 18px rgba(0,0,0,0.08); padding: 16px 20px; margin-bottom: 16px; }
+      input, button, textarea { padding: 8px 10px; font-size: 14px; border-radius: 8px; border: 1px solid #d1d5db; width: 100%; box-sizing: border-box; }
+      button { background:#2563eb; color:#fff; cursor:pointer; border:none; width:auto; }
+      button.secondary { background:#10b981; }
+      pre { background:#0f172a; color:#e2e8f0; padding: 12px; border-radius: 8px; overflow:auto; }
+      ul { list-style:none; padding:0; }
+      li { padding:6px 0; border-bottom:1px dashed #e5e7eb; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h2>统一身份认证门户 (授权服务器)</h2>
+      <p>自建 CA / 用户证书管理 / OAuth 测试</p>
+    </header>
+    <main id="app">
+      <div class="card">
+        <h3>注册用户（可绑定客户端证书指纹）</h3>
+        <label>用户名</label>
+        <input v-model="username" placeholder="carol" />
+        <label>密码</label>
+        <input type="password" v-model="password" placeholder="strong-password" />
+        <label>证书指纹（可选，用于 mTLS 绑定）</label>
+        <input v-model="fingerprint" placeholder="sha256 fingerprint" />
+        <button @click="register">注册</button>
+      </div>
+
+      <div class="card">
+        <h3>登录并获取 session_token</h3>
+        <button class="secondary" @click="login">登录</button>
+        <p>session_token: {{ sessionToken || "无" }}</p>
+      </div>
+
+      <div class="card">
+        <h3>已注册用户与证书</h3>
+        <button @click="loadCerts">刷新列表</button>
+        <ul>
+          <li v-for="(v,k) in users" :key="k">{{ k }} — FP: {{ v.cert_fingerprint || "未绑定" }}</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>CA 提示</h3>
+        <p>将 <code>certs/ca.crt</code> 导入系统/浏览器信任，可验证服务器证书。</p>
+        <p>客户端证书通过反向代理启用 mTLS，代理应在请求头注入 <code>X-Client-Cert</code> 或 <code>X-Client-Cert-Fingerprint</code>。</p>
+        <pre>curl -v --cert certs/alice.crt --key certs/alice.key https://localhost:5000/health</pre>
+      </div>
+    </main>
+
+    <script>
+      const { createApp } = Vue;
+      createApp({
+        data() {
+          return {
+            base: "https://localhost:5000",
+            username: "carol",
+            password: "password123",
+            fingerprint: "",
+            sessionToken: "",
+            users: {},
+          };
+        },
+        mounted() { this.loadCerts(); },
+        methods: {
+          async register() {
+            const res = await fetch(`${this.base}/auth/register`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username: this.username, password: this.password, cert_fingerprint: this.fingerprint || undefined }),
+            });
+            const data = await res.json();
+            if (!res.ok) { alert(JSON.stringify(data)); return; }
+            alert("注册成功");
+            this.loadCerts();
+          },
+          async login() {
+            const res = await fetch(`${this.base}/auth/login`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username: this.username, password: this.password }),
+            });
+            const data = await res.json();
+            if (!res.ok) { alert(JSON.stringify(data)); return; }
+            this.sessionToken = data.session_token;
+          },
+          async loadCerts() {
+            const res = await fetch(`${this.base}/certs`);
+            const data = await res.json();
+            this.users = data;
+          },
+        },
+      }).mount("#app");
+    </script>
+  </body>
+</html>

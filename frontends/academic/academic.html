@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>教务信息站点 - SSO 演示</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+      body { font-family: "Segoe UI", sans-serif; margin: 0; background: linear-gradient(135deg,#f2f4ff,#e6f3ff); color:#1f2937; }
+      header { padding: 16px 24px; background: #0f172a; color: #e2e8f0; }
+      main { padding: 24px; max-width: 960px; margin: auto; }
+      .card { background: #fff; border-radius: 12px; box-shadow: 0 8px 18px rgba(15,23,42,0.08); padding: 16px 20px; margin-bottom: 16px; }
+      input, button { padding: 8px 10px; font-size: 14px; border-radius: 8px; border: 1px solid #d9e0e8; }
+      button { background: #2563eb; color: #fff; border: none; cursor: pointer; }
+      button.secondary { background: #0ea5e9; }
+      button:disabled { opacity: 0.6; cursor: not-allowed; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+      .badge { background: #e0f2fe; color: #0ea5e9; padding: 2px 8px; border-radius: 6px; font-size: 12px; }
+      pre { background: #0b1220; color: #cbd5e1; padding: 12px; border-radius: 8px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h2>教务信息站点 · OAuth2.0 SSO</h2>
+    </header>
+    <main id="app">
+      <div class="card">
+        <h3>1) 登录统一身份认证</h3>
+        <div class="grid">
+          <div>
+            <label>用户名</label><br />
+            <input v-model="username" placeholder="alice" />
+          </div>
+          <div>
+            <label>密码</label><br />
+            <input type="password" v-model="password" placeholder="password123" />
+          </div>
+        </div>
+        <p>已存 session token: <span class="badge" v-if="sessionToken">{{ sessionToken }}</span><span v-else>无</span></p>
+        <button @click="login" :disabled="loading">获取 session_token</button>
+      </div>
+
+      <div class="card">
+        <h3>2) 请求授权码 & 交换访问令牌</h3>
+        <p>当前授权码: <span class="badge" v-if="code">{{ code }}</span><span v-else>无</span></p>
+        <p>访问令牌: <span class="badge" v-if="accessToken">{{ accessToken.slice(0,22) }}...</span><span v-else>无</span></p>
+        <button @click="authorize" :disabled="!sessionToken || loading">请求授权码</button>
+        <button class="secondary" @click="exchange" :disabled="!code || loading">换取 access/refresh token</button>
+      </div>
+
+      <div class="card">
+        <h3>3) 访问受保护资源</h3>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <button @click="loadCourses" :disabled="!accessToken || loading">获取课程列表</button>
+          <button @click="loadGrades" :disabled="!accessToken || loading">获取成绩</button>
+          <button @click="refreshToken" :disabled="!refreshToken || loading">刷新令牌</button>
+          <button @click="logout">清除令牌</button>
+        </div>
+        <h4>结果</h4>
+        <pre>{{ JSON.stringify(result, null, 2) }}</pre>
+      </div>
+    </main>
+
+    <script>
+      const { createApp } = Vue;
+      createApp({
+        data() {
+          return {
+            authBase: "https://localhost:5000",
+            apiBase: "https://localhost:5001",
+            username: "alice",
+            password: "password123",
+            sessionToken: localStorage.getItem("academic_session") || "",
+            code: "",
+            accessToken: localStorage.getItem("academic_access") || "",
+            refreshToken: localStorage.getItem("academic_refresh") || "",
+            result: {},
+            loading: false,
+          };
+        },
+        methods: {
+          async login() {
+            this.loading = true;
+            try {
+              const res = await fetch(`${this.authBase}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: this.username, password: this.password }),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || "login failed");
+              this.sessionToken = data.session_token;
+              localStorage.setItem("academic_session", this.sessionToken);
+              this.toast("登录成功");
+            } catch (e) {
+              alert(e.message);
+            } finally {
+              this.loading = false;
+            }
+          },
+          async authorize() {
+            if (!this.sessionToken) return;
+            this.loading = true;
+            try {
+              const url = `${this.authBase}/auth/authorize?response_type=code&client_id=academic-app&redirect_uri=${encodeURIComponent("https://localhost:4173/academic.html#callback")}&state=xyz`;
+              const res = await fetch(url, { headers: { "X-Session-Token": this.sessionToken } });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || "authorize failed");
+              const fragment = new URL(data.redirect_uri).hash;
+              const params = new URLSearchParams(fragment.split('?')[1]);
+              this.code = params.get("code");
+              this.toast("已获取授权码");
+            } catch (e) {
+              alert(e.message);
+            } finally {
+              this.loading = false;
+            }
+          },
+          async exchange() {
+            if (!this.code) return;
+            this.loading = true;
+            try {
+              const res = await fetch(`${this.apiBase}/exchange`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code: this.code }),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || "exchange failed");
+              this.accessToken = data.access_token;
+              this.refreshToken = data.refresh_token;
+              localStorage.setItem("academic_access", this.accessToken);
+              localStorage.setItem("academic_refresh", this.refreshToken);
+              this.toast("已换取访问令牌");
+            } catch (e) {
+              alert(e.message);
+            } finally {
+              this.loading = false;
+            }
+          },
+          async loadCourses() {
+            await this.fetchProtected("/courses");
+          },
+          async loadGrades() {
+            await this.fetchProtected("/grades");
+          },
+          async refreshToken() {
+            if (!this.refreshToken) return;
+            this.loading = true;
+            try {
+              const res = await fetch(`${this.authBase}/auth/token`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  grant_type: "refresh_token",
+                  refresh_token: this.refreshToken,
+                  client_id: "academic-app",
+                  client_secret: "academic-secret",
+                }),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || "refresh failed");
+              this.accessToken = data.access_token;
+              this.refreshToken = data.refresh_token;
+              localStorage.setItem("academic_access", this.accessToken);
+              localStorage.setItem("academic_refresh", this.refreshToken);
+              this.toast("刷新令牌成功");
+            } catch (e) {
+              alert(e.message);
+            } finally {
+              this.loading = false;
+            }
+          },
+          async fetchProtected(path) {
+            if (!this.accessToken) return;
+            this.loading = true;
+            try {
+              const res = await fetch(`${this.apiBase}${path}`, {
+                headers: { Authorization: `Bearer ${this.accessToken}` },
+              });
+              const data = await res.json();
+              this.result = data;
+              if (!res.ok) throw new Error(JSON.stringify(data));
+            } catch (e) {
+              alert(e.message);
+            } finally {
+              this.loading = false;
+            }
+          },
+          logout() {
+            this.accessToken = "";
+            this.refreshToken = "";
+            this.code = "";
+            localStorage.removeItem("academic_access");
+            localStorage.removeItem("academic_refresh");
+          },
+          toast(msg) {
+            console.log(msg);
+          },
+        },
+      }).mount("#app");
+    </script>
+  </body>
+</html>

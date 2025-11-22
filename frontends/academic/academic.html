@@ -52,7 +52,7 @@
         <div style="display:flex; gap:12px; flex-wrap:wrap;">
           <button @click="loadCourses" :disabled="!accessToken || loading">获取课程列表</button>
           <button @click="loadGrades" :disabled="!accessToken || loading">获取成绩</button>
-          <button @click="refreshToken" :disabled="!refreshToken || loading">刷新令牌</button>
+          <button @click="refreshAccessToken" :disabled="!refreshToken || loading">刷新令牌</button>
           <button @click="logout">清除令牌</button>
         </div>
         <h4>结果</h4>
@@ -143,7 +143,7 @@
           async loadGrades() {
             await this.fetchProtected("/grades");
           },
-          async refreshToken() {
+          async refreshAccessToken() {
             if (!this.refreshToken) return;
             this.loading = true;
             try {

@@ -68,6 +68,7 @@
             sessionToken: localStorage.getItem("cloud_session") || "",
             accessToken: localStorage.getItem("cloud_access") || "",
             refreshToken: localStorage.getItem("cloud_refresh") || "",
+            code: "",
             files: [],
             loading: false,
           };
@@ -92,9 +93,16 @@
             }
           },
           async fullFlow() {
-            if (!this.sessionToken) await this.login();
-            await this.authorize();
-            await this.exchange();
+            this.loading = true;
+            try {
+              if (!this.sessionToken) await this.login();
+              await this.authorize();
+              await this.exchange(true);
+            } catch (e) {
+              alert(e.message);
+            } finally {
+              this.loading = false;
+            }
           },
           async authorize() {
             const url = `${this.authBase}/auth/authorize?response_type=code&client_id=cloud-app&redirect_uri=${encodeURIComponent("https://localhost:4173/cloud.html#callback")}&state=cloud`;
@@ -102,10 +110,11 @@
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "authorize failed");
             const params = new URL(data.redirect_uri).searchParams;
-            this.code = params.get("code");
+            this.code = params.get("code") || data.code || "";
+            if (!this.code) throw new Error("未获取到授权码");
           },
-          async exchange() {
-            if (!this.code) return;
+          async exchange(silent = false) {
+            if (!this.code) { if (!silent) alert("缺少授权码"); return; }
             const res = await fetch(`${this.apiBase}/exchange`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },

@@ -1,7 +1,7 @@
 import hashlib
 import time
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import jwt
 from flask import Flask, jsonify, request
@@ -136,7 +136,9 @@ def authorize():
 
 
 def _issue_tokens(username, client_id, fingerprint=None):
-    now = datetime.utcnow()
+    # datetime.utcnow().timestamp()  
+    # .timestamp() 会将没有时区信息的UTC时间当作本地时间来处理，导致时区问题，所以改用下面的写法
+    now = datetime.now(timezone.utc)
     exp_ts = int((now + timedelta(seconds=ACCESS_EXPIRES_SECONDS)).timestamp())
     access_payload = {
         "sub": username,

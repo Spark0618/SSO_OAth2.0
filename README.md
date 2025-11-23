@@ -8,7 +8,7 @@ SSO OAuth2.0 + 简易CA 演示
 - `auth-server/`：统一身份认证（授权服务器，Flask REST API）
 - `academic-api/`：教务信息 API（资源服务器）
 - `cloud-api/`：云盘 API（资源服务器）
-- `frontends/`：Vue（CDN 方式）前端示例，分别对应教务、云盘、认证门户
+- `frontends/`：Vue（CDN 方式）前端示例，分别对应教务、云盘、认证门户，附带简易https_server
 - `certs/`：自建 CA 与服务/客户端证书示例脚本与占位
 
 快速开始
@@ -42,24 +42,31 @@ FLASK_APP=cloud-api/app.py flask run --cert=certs/cloud-api.crt --key=certs/clou
 ```
 > Flask 内置 TLS 不支持双向认证，请在需要 mTLS 时用 Nginx/Traefik/Caddy 终止 TLS，并将客户端证书（PEM 或指纹）通过请求头转发给后端，后端会在 `request.headers["X-Client-Cert"]` 检查。
 
-4) 启动前端（本地文件/静态服务器均可，端口可由 `python -m http.server 4173`）：
+4) hosts 绑定并启动前端（模拟不同站点域名）：
+- 在 hosts 添加：`127.0.0.1 auth.localhost academic.localhost cloud.localhost`
+- 重新生成服务端证书（SAN 已含上述域名）：`cd certs && ./create_server.sh auth-server` 等
+- 启动静态服务器（示例占用 3 个端口，分别映射不同站点）：
 ```
-# 示例：在 frontends/academic 目录下
-python -m http.server 4173
+# 教务前端
+cd frontends/academic && python ../https_server.py --ssl-cert ../../certs/academic-api.crt --ssl-key ../../certs/academic-api.key --port 4174
+# 云盘前端
+cd ../cloud && python ../https_server.py --ssl-cert ../../certs/cloud-api.crt --ssl-key ../../certs/cloud-api.key --port 4176
+# 认证门户
+cd ../auth && python ../https_server.py --ssl-cert ../../certs/auth-server.crt --ssl-key ../../certs/auth-server.key --port 4173
 ```
 分别打开：
-- 教务前端：`https://localhost:4173/academic.html`
-- 云盘前端：`https://localhost:4173/cloud.html`
-- 认证门户：`https://localhost:4173/auth.html`
-（如使用自签证书，需信任 CA 并接受浏览器提示）
+- 教务前端：`http://academic.localhost:4174/academic.html`
+- 云盘前端：`http://cloud.localhost:4176/cloud.html`
+- 认证门户：`http://auth.localhost:4173/auth.html`
+后端 API/认证站点使用 `https://auth.localhost:5000`、`https://academic.localhost:5001`、`https://cloud.localhost:5002`；Cookie 以各自域隔离。
 
-OAuth2.0 流程
--------------
-1. 前端 “用统一身份认证登录” -> 调用认证站点 `/auth/login` 获取 `session_token`
-2. 前端携带 `session_token` 请求 `/auth/authorize?response_type=code&client_id=...&redirect_uri=...&state=...` 获得授权码 `code`
-3. 前端把 `code` 发送到对应后端的 `/exchange`（后端携带 `client_secret` 向认证服务器 `/auth/token` 换取 `access_token` + `refresh_token`）
-4. 前端保存访问令牌（示例存 `localStorage`），后续 API 请求在 `Authorization: Bearer <access_token>` 中携带
-5. 资源服务器在每次请求时调用认证服务器 `/auth/validate` 验证令牌有效性（同时校验 mTLS 指纹/用户证书时序列号）
+OAuth2.0 & SSO 流程（前端不持有访问令牌）
+---------------------------------------
+1. 统一认证站点 `/auth/login` 下发 HttpOnly `sso_session`（SameSite=None; Secure）。
+2. 业务前端点击“前往登录”直接跳转后端 `/session/login`，后端 302 到认证门户（`AUTH_PORTAL`，默认 `frontends/auth/auth.html`），携带 `next=<authorize_url>`；登录成功后门户自动跳转到 `next`，再由认证站点签发授权码并回调 `/session/callback`。
+3. 业务后端用授权码向认证站点换取 access/refresh token，并将其保存在后端内存；同时为该站点设置自己的 HttpOnly 会话 Cookie（如 `academic_session`、`cloud_session`）。
+4. 业务前端后续请求只带站点的会话 Cookie（credentials: include），不暴露 access token 到浏览器。
+5. 资源服务器在每次请求时调用认证站点 `/auth/validate` 验证访问令牌；过期时后端使用 refresh token 静默续期。
 
 证书与 TLS 演示
 ---------------

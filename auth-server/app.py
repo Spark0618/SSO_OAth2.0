@@ -2,6 +2,7 @@ import hashlib
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
+from urllib.parse import quote_plus
 
 import jwt
 from flask import Flask, jsonify, request
@@ -13,18 +14,25 @@ app = Flask(__name__)
 JWT_SECRET = "dev-secret-signing-key"
 ACCESS_EXPIRES_SECONDS = 300
 REFRESH_EXPIRES_SECONDS = 3600
+LOGIN_PORTAL = "https://auth.localhost:4173/auth.html"
 
 CLIENTS = {
     "academic-app": {
         "name": "教务信息站点",
         "client_secret": "academic-secret",
-        "redirect_uri": "https://localhost:4173/academic.html#callback",
+        "redirect_uris": [
+            "https://academic.localhost:4174/academic.html#callback",
+            "https://academic.localhost:5001/session/callback",
+        ],
         "scopes": ["courses.read", "grades.read"],
     },
     "cloud-app": {
         "name": "云盘站点",
         "client_secret": "cloud-secret",
-        "redirect_uri": "https://localhost:4173/cloud.html#callback",
+        "redirect_uris": [
+            "https://cloud.localhost:4176/cloud.html#callback",
+            "https://cloud.localhost:5002/session/callback",
+        ],
         "scopes": ["files.read", "files.write"],
     },
 }
@@ -57,7 +65,13 @@ def _fingerprint_from_headers():
 
 
 def _cors(resp):
-    resp.headers["Access-Control-Allow-Origin"] = "*"
+    origin = request.headers.get("Origin")
+    if origin:
+        resp.headers["Access-Control-Allow-Origin"] = origin
+        resp.headers["Vary"] = "Origin"
+        resp.headers["Access-Control-Allow-Credentials"] = "true"
+    else:
+        resp.headers["Access-Control-Allow-Origin"] = "*"
     resp.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization,X-Session-Token,X-Client-Cert,X-Client-Cert-Fingerprint"
     resp.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
     return resp
@@ -66,6 +80,12 @@ def _cors(resp):
 @app.after_request
 def add_cors(resp):
     return _cors(resp)
+
+
+@app.route("/<path:_any>", methods=["OPTIONS"])
+def options_passthrough(_any):
+    """Handle CORS preflight."""
+    return _cors(jsonify({}))
 
 
 @app.route("/health", methods=["GET"])
@@ -105,12 +125,23 @@ def login():
 
     session_token = str(uuid.uuid4())
     SESSIONS[session_token] = {"username": username, "issued_at": time.time(), "fingerprint": request_fp}
-    return jsonify({"session_token": session_token, "username": username})
+    resp = jsonify({"session_token": session_token, "username": username})
+    # HttpOnly cookie for browser-based SSO; requires HTTPS + SameSite=None for cross-site
+    resp.set_cookie(
+        "sso_session",
+        session_token,
+        httponly=True,
+        secure=True,
+        samesite="None",
+        max_age=3600,
+        domain=request.host.split(":")[0],
+    )
+    return resp
 
 
 @app.route("/auth/authorize", methods=["GET"])
 def authorize():
-    session_token = request.headers.get("X-Session-Token")
+    session_token = request.headers.get("X-Session-Token") or request.cookies.get("sso_session")
     client_id = request.args.get("client_id")
     redirect_uri = request.args.get("redirect_uri")
     state = request.args.get("state", "")
@@ -119,9 +150,11 @@ def authorize():
         return jsonify({"error": "unsupported response_type"}), 400
     session = SESSIONS.get(session_token)
     if not session:
-        return jsonify({"error": "invalid session"}), 401
+        # If not logged in, redirect to login portal with next parameter
+        next_url = quote_plus(request.url)
+        return "", 302, {"Location": f"{LOGIN_PORTAL}?next={next_url}"}
     client = CLIENTS.get(client_id)
-    if not client or client["redirect_uri"] != redirect_uri:
+    if not client or redirect_uri not in client.get("redirect_uris", []):
         return jsonify({"error": "invalid client"}), 400
 
     code = str(uuid.uuid4())
@@ -132,7 +165,7 @@ def authorize():
         "fingerprint": session.get("fingerprint"),
     }
     redirect = f"{redirect_uri}?code={code}&state={state}"
-    return jsonify({"redirect_uri": redirect, "code": code, "client": client["name"]})
+    return "", 302, {"Location": redirect}
 
 
 def _issue_tokens(username, client_id, fingerprint=None):
@@ -229,6 +262,15 @@ def validate():
     if payload.get("fp") and fingerprint != payload.get("fp"):
         return jsonify({"error": "client certificate mismatch"}), 401
     return jsonify({"active": True, "username": payload["sub"], "client_id": payload["client_id"]})
+
+
+@app.route("/auth/session", methods=["GET"])
+def session_status():
+    session_token = request.cookies.get("sso_session")
+    session = SESSIONS.get(session_token)
+    if not session:
+        return jsonify({"active": False}), 401
+    return jsonify({"active": True, "username": session["username"]})
 
 
 @app.route("/ca/issue", methods=["POST"])

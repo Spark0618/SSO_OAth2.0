@@ -61,7 +61,7 @@
       createApp({
         data() {
           return {
-            base: "https://localhost:5000",
+            base: "https://auth.localhost:5000",
             username: "carol",
             password: "password123",
             fingerprint: "",
@@ -69,11 +69,26 @@
             users: {},
           };
         },
-        mounted() { this.loadCerts(); },
+        mounted() {
+          this.loadCerts();
+          const nextRaw = new URLSearchParams(window.location.search).get("next");
+          this.tryAutoLogin(nextRaw);
+        },
         methods: {
+          async tryAutoLogin(nextRaw){
+            // 尝试使用已登录的会话自动登录
+            const res = await fetch(`${this.base}/auth/session`, { credentials: "include" });
+            if (res.ok) {
+              const data = await res.json();
+              this.sessionToken = data.session_token;
+              // 自动跳转
+              if(nextRaw) window.location.href = decodeURIComponent(nextRaw);
+            }
+          },
           async register() {
             const res = await fetch(`${this.base}/auth/register`, {
               method: "POST",
+              credentials: "include",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ username: this.username, password: this.password, cert_fingerprint: this.fingerprint || undefined }),
             });
@@ -85,12 +100,15 @@
           async login() {
             const res = await fetch(`${this.base}/auth/login`, {
               method: "POST",
+              credentials: "include",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ username: this.username, password: this.password }),
             });
             const data = await res.json();
             if (!res.ok) { alert(JSON.stringify(data)); return; }
             this.sessionToken = data.session_token;
+            const nextRaw = new URLSearchParams(window.location.search).get("next");
+            if (nextRaw) window.location.href = decodeURIComponent(nextRaw);
           },
           async loadCerts() {
             const res = await fetch(`${this.base}/certs`);

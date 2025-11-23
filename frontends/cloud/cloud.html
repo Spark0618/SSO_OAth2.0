@@ -26,26 +26,16 @@
     <main id="app">
       <div class="card">
         <h3>登录 & 授权</h3>
-        <div class="grid">
-          <div>
-            <label>用户名</label><br />
-            <input v-model="username" placeholder="alice" />
-          </div>
-          <div>
-            <label>密码</label><br />
-            <input type="password" v-model="password" placeholder="password123" />
-          </div>
-        </div>
-        <p>Session: {{ sessionToken || "无" }}</p>
-        <button @click="login" :disabled="loading">登录获取 session</button>
-        <button class="secondary" @click="fullFlow" :disabled="loading">一键授权 + 换令牌</button>
+        <p>当前状态：{{ loggedIn ? "已登录" : "未登录" }}</p>
+        <button class="secondary" @click="goLogin">前往统一认证（302）</button>
+        <button @click="logout">退出</button>
       </div>
 
       <div class="card">
         <h3>云盘文件</h3>
         <div style="display:flex; gap:12px; flex-wrap:wrap;">
-          <button @click="listFiles" :disabled="!accessToken || loading">列出文件</button>
-          <button @click="uploadFile" :disabled="!accessToken || loading">模拟上传</button>
+          <button @click="listFiles" :disabled="!loggedIn || loading">列出文件</button>
+          <button @click="uploadFile" :disabled="!loggedIn || loading">模拟上传</button>
           <button @click="logout">清除令牌</button>
         </div>
         <ul>
@@ -57,102 +47,55 @@
     </main>
 
     <script>
-      const { createApp } = Vue;
-      createApp({
-        data() {
-          return {
-            authBase: "https://localhost:5000",
-            apiBase: "https://localhost:5002",
-            username: "alice",
-            password: "password123",
-            sessionToken: localStorage.getItem("cloud_session") || "",
-            accessToken: localStorage.getItem("cloud_access") || "",
-            refreshToken: localStorage.getItem("cloud_refresh") || "",
-            code: "",
-            files: [],
-            loading: false,
-          };
-        },
-        methods: {
-          async login() {
-            this.loading = true;
-            try {
-              const res = await fetch(`${this.authBase}/auth/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username: this.username, password: this.password }),
-              });
-              const data = await res.json();
-              if (!res.ok) throw new Error(data.error || "login failed");
-              this.sessionToken = data.session_token;
-              localStorage.setItem("cloud_session", this.sessionToken);
-            } catch (e) {
-              alert(e.message);
-            } finally {
-              this.loading = false;
-            }
-          },
-          async fullFlow() {
-            this.loading = true;
-            try {
-              if (!this.sessionToken) await this.login();
-              await this.authorize();
-              await this.exchange(true);
-            } catch (e) {
-              alert(e.message);
-            } finally {
-              this.loading = false;
-            }
-          },
-          async authorize() {
-            const url = `${this.authBase}/auth/authorize?response_type=code&client_id=cloud-app&redirect_uri=${encodeURIComponent("https://localhost:4173/cloud.html#callback")}&state=cloud`;
-            const res = await fetch(url, { headers: { "X-Session-Token": this.sessionToken } });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "authorize failed");
-            const params = new URL(data.redirect_uri).searchParams;
-            this.code = params.get("code") || data.code || "";
-            if (!this.code) throw new Error("未获取到授权码");
-          },
-          async exchange(silent = false) {
-            if (!this.code) { if (!silent) alert("缺少授权码"); return; }
-            const res = await fetch(`${this.apiBase}/exchange`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ code: this.code }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "exchange failed");
-            this.accessToken = data.access_token;
-            this.refreshToken = data.refresh_token;
-            localStorage.setItem("cloud_access", this.accessToken);
-            localStorage.setItem("cloud_refresh", this.refreshToken);
-          },
-          async listFiles() {
-            const res = await fetch(`${this.apiBase}/files`, {
-              headers: { Authorization: `Bearer ${this.accessToken}` },
-            });
-            const data = await res.json();
-            if (!res.ok) { alert(JSON.stringify(data)); return; }
-            this.files = data.files || [];
-          },
-          async uploadFile() {
-            const res = await fetch(`${this.apiBase}/files`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.accessToken}` },
-              body: JSON.stringify({ name: `report-${Date.now()}.pdf`, size: "4KB" }),
-            });
-            const data = await res.json();
-            if (!res.ok) { alert(JSON.stringify(data)); return; }
-            this.files = data.files || [];
-          },
-          logout() {
-            this.accessToken = "";
-            this.refreshToken = "";
-            localStorage.removeItem("cloud_access");
-            localStorage.removeItem("cloud_refresh");
-          },
-        },
-      }).mount("#app");
+          const { createApp } = Vue;
+          createApp({
+            data() {
+              return {
+                authBase: "https://auth.localhost:5000",
+                apiBase: "https://cloud.localhost:5002",
+                loggedIn: false,
+                files: [],
+                loading: false,
+              };
+            },
+            mounted() {
+              this.checkStatus();
+            },
+            methods: {
+              goLogin() {
+                window.location.href = `${this.apiBase}/session/login`;
+              },
+              async checkStatus() {
+                const res = await fetch(`${this.apiBase}/session/status`, { credentials: "include" });
+                this.loggedIn = res.ok;
+              },
+              async listFiles() {
+                if (!this.loggedIn) { alert("请先登录"); return; }
+                const res = await fetch(`${this.apiBase}/files`, {
+                  credentials: "include",
+                });
+                const data = await res.json();
+                if (!res.ok) { alert(JSON.stringify(data)); return; }
+                this.files = data.files || [];
+              },
+              async uploadFile() {
+                if (!this.loggedIn) { alert("请先登录"); return; }
+                const res = await fetch(`${this.apiBase}/files`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+                  body: JSON.stringify({ name: `report-${Date.now()}.pdf`, size: "4KB" }),
+                });
+                const data = await res.json();
+                if (!res.ok) { alert(JSON.stringify(data)); return; }
+                this.files = data.files || [];
+              },
+              logout() {
+                fetch(`${this.apiBase}/session/logout`, { method: "POST", credentials: "include" });
+                this.loggedIn = false;
+              },
+            },
+          }).mount("#app");
     </script>
   </body>
 </html>

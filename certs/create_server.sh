@@ -19,7 +19,7 @@ openssl req -new -key "${NAME}.key" \
 
 echo "Signing certificate with local CA..."
 cat > "${NAME}.ext" <<EOF
-subjectAltName=DNS:localhost,IP:127.0.0.1
+subjectAltName=DNS:localhost,DNS:auth.localhost,DNS:academic.localhost,DNS:cloud.localhost,IP:127.0.0.1
 extendedKeyUsage=serverAuth
 EOF
 

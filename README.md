@@ -45,7 +45,7 @@ FLASK_APP=cloud-api/app.py flask run --cert=certs/cloud-api.crt --key=certs/clou
 4) hosts 绑定并启动前端（模拟不同站点域名）：
 - 在 hosts 添加：`127.0.0.1 auth.localhost academic.localhost cloud.localhost`
 - 重新生成服务端证书（SAN 已含上述域名）：`cd certs && ./create_server.sh auth-server` 等
-- 启动静态服务器（示例占用 3 个端口，分别映射不同站点）：
+- 启动静态HTTPS服务器（示例占用 3 个端口，分别映射不同站点）：
 ```
 # 教务前端
 cd frontends/academic && python ../https_server.py --ssl-cert ../../certs/academic-api.crt --ssl-key ../../certs/academic-api.key --port 4174
@@ -55,9 +55,9 @@ cd ../cloud && python ../https_server.py --ssl-cert ../../certs/cloud-api.crt --
 cd ../auth && python ../https_server.py --ssl-cert ../../certs/auth-server.crt --ssl-key ../../certs/auth-server.key --port 4173
 ```
 分别打开：
-- 教务前端：`http://academic.localhost:4174/academic.html`
-- 云盘前端：`http://cloud.localhost:4176/cloud.html`
-- 认证门户：`http://auth.localhost:4173/auth.html`
+- 教务前端：`https://academic.localhost:4174/academic.html`
+- 云盘前端：`https://cloud.localhost:4176/cloud.html`
+- 认证门户：`https://auth.localhost:4173/auth.html`
 后端 API/认证站点使用 `https://auth.localhost:5000`、`https://academic.localhost:5001`、`https://cloud.localhost:5002`；Cookie 以各自域隔离。
 
 OAuth2.0 & SSO 流程（前端不持有访问令牌）

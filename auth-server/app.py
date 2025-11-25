@@ -6,6 +6,20 @@ from urllib.parse import quote_plus
 
 import jwt
 from flask import Flask, jsonify, request
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import sessionmaker
+from werkzeug.security import check_password_hash, generate_password_hash
+
+DB_USER = "academic_user"
+DB_PASSWORD = "academic_user@USTB2025"
+DB_HOST = "localhost"
+DB_PORT = 3306
+DB_NAME = "academic"
+
+DATABASE_URL = f"mysql+pymysql://{DB_USER}:{quote_plus(DB_PASSWORD)}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
+engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=1800, future=True)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
 app = Flask(__name__)
 
@@ -37,20 +51,35 @@ CLIENTS = {
     },
 }
 
-USERS = {
-    "alice": {
-        "password": "password123",
-        "cert_fingerprint": None,
-    },
-    "bob": {
-        "password": "password123",
-        "cert_fingerprint": None,
-    },
-}
-
 AUTH_CODES = {}
 SESSIONS = {}
 REFRESH_TOKENS = {}
+CERT_FINGERPRINTS = {}  # username -> fingerprint (仅用于 mTLS 校验，不存数据库)
+
+
+def get_db_session():
+    return SessionLocal()
+
+
+def _create_user(username: str, password: str, role: str):
+    if role not in ("student", "teacher"):
+        raise ValueError("invalid role")
+    pwd_hash = generate_password_hash(password)
+    with get_db_session() as db:
+        db.execute(
+            text("INSERT INTO users (username, password_hash, role) VALUES (:u, :p, :r)"),
+            {"u": username, "p": pwd_hash, "r": role},
+        )
+        db.commit()
+
+
+def _get_user(username: str):
+    with get_db_session() as db:
+        row = db.execute(
+            text("SELECT id, username, password_hash, role FROM users WHERE username = :u LIMIT 1"),
+            {"u": username},
+        ).mappings().first()
+        return row
 
 
 def _fingerprint_from_headers():
@@ -98,13 +127,23 @@ def register():
     data = request.get_json() or {}
     username = data.get("username")
     password = data.get("password")
+    role = data.get("role", "student")
     cert_fp = data.get("cert_fingerprint") or _fingerprint_from_headers()
     if not username or not password:
         return jsonify({"error": "username and password required"}), 400
-    if username in USERS:
+    try:
+        _create_user(username, password, role)
+    except ValueError:
+        return jsonify({"error": "invalid role, must be student or teacher"}), 400
+    except IntegrityError:
         return jsonify({"error": "user exists"}), 409
-    USERS[username] = {"password": password, "cert_fingerprint": cert_fp}
-    return jsonify({"message": "registered", "username": username, "cert_fingerprint": cert_fp}), 201
+    except SQLAlchemyError as exc:
+        return jsonify({"error": f"db error: {exc}"}), 500
+    CERT_FINGERPRINTS[username] = cert_fp
+    return (
+        jsonify({"message": "registered", "username": username, "role": role, "cert_fingerprint": cert_fp}),
+        201,
+    )
 
 
 @app.route("/auth/login", methods=["POST"])
@@ -114,17 +153,23 @@ def login():
     password = data.get("password")
     if not username or not password:
         return jsonify({"error": "missing credentials"}), 400
-    user = USERS.get(username)
-    if not user or user["password"] != password:
+    user_row = _get_user(username)
+    if not user_row or not check_password_hash(user_row["password_hash"], password):
         return jsonify({"error": "invalid credentials"}), 401
 
     request_fp = _fingerprint_from_headers()
     # Enforce mTLS if user bound to a certificate
-    if user.get("cert_fingerprint") and user["cert_fingerprint"] != request_fp:
+    bound_fp = CERT_FINGERPRINTS.get(username)
+    if bound_fp and bound_fp != request_fp:
         return jsonify({"error": "client certificate mismatch"}), 401
 
     session_token = str(uuid.uuid4())
-    SESSIONS[session_token] = {"username": username, "issued_at": time.time(), "fingerprint": request_fp}
+    SESSIONS[session_token] = {
+        "username": username,
+        "role": user_row["role"],
+        "issued_at": time.time(),
+        "fingerprint": request_fp,
+    }
     resp = jsonify({"session_token": session_token, "username": username})
     # HttpOnly cookie for browser-based SSO; requires HTTPS + SameSite=None for cross-site
     resp.set_cookie(
@@ -160,6 +205,7 @@ def authorize():
     code = str(uuid.uuid4())
     AUTH_CODES[code] = {
         "username": session["username"],
+        "role": session.get("role"),
         "client_id": client_id,
         "expires_at": time.time() + 300,
         "fingerprint": session.get("fingerprint"),
@@ -181,6 +227,10 @@ def _issue_tokens(username, client_id, fingerprint=None):
     }
     if fingerprint:
         access_payload["fp"] = fingerprint
+    # 可将角色嵌入令牌，供下游做细粒度授权（可选）
+    user_row = _get_user(username)
+    if user_row and user_row.get("role"):
+        access_payload["role"] = user_row["role"]
     access_token = jwt.encode(access_payload, JWT_SECRET, algorithm="HS256")
 
     refresh_token = str(uuid.uuid4())
@@ -263,7 +313,10 @@ def validate():
     # Optional mTLS binding
     if payload.get("fp") and fingerprint != payload.get("fp"):
         return jsonify({"error": "client certificate mismatch"}), 401
-    return jsonify({"active": True, "username": payload["sub"], "client_id": payload["client_id"]})
+    resp_data = {"active": True, "username": payload["sub"], "client_id": payload["client_id"]}
+    if payload.get("role"):
+        resp_data["role"] = payload["role"]
+    return jsonify(resp_data)
 
 
 @app.route("/auth/session", methods=["GET"])

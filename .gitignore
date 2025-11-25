@@ -4,3 +4,4 @@
 *.csr
 *.ext
 __pycache__/
+venv/

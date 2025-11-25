@@ -38,21 +38,29 @@
         <div class="card">
           <h3>个人信息</h3>
           <div class="row">
-            <div class="item">姓名：{{ profile.personal.name }}</div>
-            <div class="item">学号：{{ profile.personal.student_id }}</div>
-            <div class="item">性别：{{ profile.personal.gender }}</div>
-            <div class="item">籍贯：{{ profile.personal.hometown }}</div>
+            <div class="item">姓名：<input v-model="profile.personal.name" /></div>
+            <div class="item">学号/工号：<input v-model="profile.personal.student_id" /></div>
           </div>
+          <button style="margin-top:10px;" @click="saveProfile">保存信息</button>
         </div>
 
         <div class="card">
-          <h3>学籍信息</h3>
+          <h3>教职信息</h3>
           <div class="row">
-            <div class="item">年级：{{ profile.enrollment.grade }}</div>
-            <div class="item">学院：{{ profile.enrollment.college }}</div>
-            <div class="item">专业：{{ profile.enrollment.major }}</div>
-            <div class="item">学业进度：{{ profile.enrollment.progress }}</div>
+            <div class="item">年级/职称：<input v-model="profile.enrollment.grade" /></div>
+            <div class="item">学院/部门：<input v-model="profile.enrollment.college" /></div>
+            <div class="item">专业/岗位：<input v-model="profile.enrollment.major" /></div>
           </div>
+          <button style="margin-top:10px;" @click="saveProfile">保存信息</button>
+        </div>
+
+        <div class="card">
+          <h3>修改密码</h3>
+          <div class="row">
+            <div class="item">原密码：<input type="password" v-model="oldPassword" /></div>
+            <div class="item">新密码：<input type="password" v-model="newPassword" /></div>
+          </div>
+          <button style="margin-top:10px;" @click="changePassword">修改密码</button>
         </div>
       </main>
     </div>
@@ -64,10 +72,12 @@
           return {
             apiBase: "https://academic.localhost:5001",
             profile: {
-              personal: { name: "-", student_id: "-", gender: "-", hometown: "-" },
+              personal: { name: "-", student_id: "-" },
               enrollment: { grade: "-", college: "-", major: "-", progress: "-" },
             },
             statusText: "加载中...",
+            oldPassword: "",
+            newPassword: "",
           };
         },
         mounted() {
@@ -83,6 +93,52 @@
               this.statusText = `已登录：${data.user || "未知用户"}`;
             } catch (e) {
               this.statusText = e.message || "获取失败";
+            }
+          },
+          async saveProfile() {
+            try {
+              const res = await fetch(`${this.apiBase}/profile`, {
+                method: "PUT",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  name: this.profile.personal.name,
+                  student_id: this.profile.personal.student_id,
+                  gender: this.profile.personal.gender,
+                  hometown: this.profile.personal.hometown,
+                  grade: this.profile.enrollment.grade,
+                  college: this.profile.enrollment.college,
+                  major: this.profile.enrollment.major,
+                  title: this.profile.enrollment.grade,
+                  department: this.profile.enrollment.college,
+                }),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || "保存失败");
+              alert("已保存");
+            } catch (e) {
+              alert(e.message);
+            }
+          },
+          async changePassword() {
+            if (!this.oldPassword || !this.newPassword) {
+              alert("请填写原密码和新密码");
+              return;
+            }
+            try {
+              const res = await fetch(`${this.apiBase}/profile/password`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ old_password: this.oldPassword, new_password: this.newPassword }),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || "修改失败");
+              alert("密码已修改");
+              this.oldPassword = "";
+              this.newPassword = "";
+            } catch (e) {
+              alert(e.message);
             }
           },
         },

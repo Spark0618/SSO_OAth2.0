@@ -45,6 +45,9 @@ CREATE TABLE courses (
   title VARCHAR(200) NOT NULL,
   teacher_id INT NOT NULL,
   description TEXT,
+  day TINYINT,
+  slot TINYINT,
+  location VARCHAR(100),
   CONSTRAINT fk_course_teacher FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

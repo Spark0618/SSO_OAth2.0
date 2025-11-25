@@ -220,6 +220,7 @@ def token():
                 "token_type": "Bearer",
                 "expires_in": ACCESS_EXPIRES_SECONDS,
                 "expires_at": expires_at,
+                "username": code_data["username"],
             }
         )
 
@@ -238,6 +239,7 @@ def token():
                 "token_type": "Bearer",
                 "expires_in": ACCESS_EXPIRES_SECONDS,
                 "expires_at": expires_at,
+                "username": stored["username"],
             }
         )
 

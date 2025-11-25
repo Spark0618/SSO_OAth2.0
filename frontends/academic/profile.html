@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>我的信息 - 教务站点</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+      body { font-family: "Segoe UI", sans-serif; margin:0; background: linear-gradient(135deg,#f2f4ff,#e6f3ff); color:#1f2937; }
+      header { display:flex; align-items:center; justify-content:space-between; padding: 16px 24px; background:#0f172a; color:#e2e8f0; }
+      main { max-width: 900px; margin: 24px auto; padding: 0 16px 24px; }
+      .card { background:#fff; border-radius:16px; box-shadow: 0 8px 18px rgba(15,23,42,0.08); padding:18px 20px; margin-bottom:16px; }
+      .card h3 { margin-top:0; }
+      .badge { background:#e0f2fe; color:#0ea5e9; padding:4px 10px; border-radius:999px; font-size:12px; }
+      .row { display:flex; flex-wrap:wrap; gap:12px; }
+      .item { min-width:240px; background:#f8fafc; padding:10px 12px; border-radius:10px; }
+      a { color:#2563eb; text-decoration:none; }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <div>
+          <h2 style="margin:0;">我的信息</h2>
+          <p style="margin:4px 0 0 0; color:#cbd5e1;">来自 academic-api /profile</p>
+        </div>
+        <div>
+          <a href="academic.html">← 返回主页</a>
+        </div>
+      </header>
+      <main>
+        <div class="card">
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <h3 style="margin:0;">身份状态</h3>
+            <span class="badge">{{ statusText }}</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>个人信息</h3>
+          <div class="row">
+            <div class="item">姓名：{{ profile.personal.name }}</div>
+            <div class="item">学号：{{ profile.personal.student_id }}</div>
+            <div class="item">性别：{{ profile.personal.gender }}</div>
+            <div class="item">籍贯：{{ profile.personal.hometown }}</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>学籍信息</h3>
+          <div class="row">
+            <div class="item">年级：{{ profile.enrollment.grade }}</div>
+            <div class="item">学院：{{ profile.enrollment.college }}</div>
+            <div class="item">专业：{{ profile.enrollment.major }}</div>
+            <div class="item">学业进度：{{ profile.enrollment.progress }}</div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const { createApp } = Vue;
+      createApp({
+        data() {
+          return {
+            apiBase: "https://academic.localhost:5001",
+            profile: {
+              personal: { name: "-", student_id: "-", gender: "-", hometown: "-" },
+              enrollment: { grade: "-", college: "-", major: "-", progress: "-" },
+            },
+            statusText: "加载中...",
+          };
+        },
+        mounted() {
+          this.loadProfile();
+        },
+        methods: {
+          async loadProfile() {
+            try {
+              const res = await fetch(`${this.apiBase}/profile`, { credentials: "include" });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || "未登录");
+              this.profile = data.profile || this.profile;
+              this.statusText = `已登录：${data.user || "未知用户"}`;
+            } catch (e) {
+              this.statusText = e.message || "获取失败";
+            }
+          },
+        },
+      }).mount("#app");
+    </script>
+  </body>
+</html>

@@ -13,11 +13,19 @@ CALLBACK_URL = os.environ.get("CALLBACK_URL", "https://academic.localhost:5001/s
 AUTH_PORTAL = os.environ.get("AUTH_PORTAL", "https://auth.localhost:4173/auth.html")
 
 COURSES = [
-    {"code": "CS101", "title": "Introduction to Computer Science"},
-    {"code": "MATH201", "title": "Discrete Mathematics"},
-    {"code": "NET300", "title": "Network Security"},
+    {"code": "CS101", "title": "程序设计基础", "day": 1, "slot": 1, "location": "一教101", "desc": "C 语言入门与程序设计思想，含上机实验。"},
+    {"code": "MATH201", "title": "高等数学", "day": 1, "slot": 2, "location": "一教102", "desc": "微积分与级数，打好数学分析基础。"},
+    {"code": "NET300", "title": "计算机网络", "day": 2, "slot": 3, "location": "实验楼305", "desc": "TCP/IP 协议栈、路由与网络安全基础。"},
+    {"code": "AI210", "title": "人工智能导论", "day": 3, "slot": 4, "location": "二教202", "desc": "AI 发展概览、搜索、机器学习与应用案例。"},
+    {"code": "OS220", "title": "操作系统", "day": 4, "slot": 2, "location": "二教201", "desc": "进程线程、内存管理、文件系统与同步机制。"},
+    {"code": "DS150", "title": "数据结构", "day": 5, "slot": 5, "location": "一教201", "desc": "链表、树、图及基本算法分析。"},
 ]
-GRADES = {"CS101": "A", "MATH201": "B+", "NET300": "A-"}
+GRADES = {"CS101": "A", "MATH201": "B+", "NET300": "A-", "AI210": "A", "OS220": "B+", "DS150": "A-"}
+
+PROFILE = {
+    "personal": {"name": "张伟", "student_id": "2021123456", "gender": "男", "hometown": "北京"},
+    "enrollment": {"grade": "2021级", "college": "计算机与通信工程学院", "major": "计算机科学与技术", "progress": "已修满 85/120 学分"},
+}
 
 SESSIONS = {}
 
@@ -86,6 +94,7 @@ def session_callback():
     if err:
         return jsonify({"error": err}), 401
     session_id = str(int(time.time())) + "-" + os.urandom(6).hex()
+    token_data["login_at"] = time.time()
     SESSIONS[session_id] = token_data
     resp = jsonify({"message": "login success"})
     resp.set_cookie(
@@ -109,7 +118,15 @@ def session_status():
     sess = SESSIONS.get(session_id)
     if not sess:
         return jsonify({"logged_in": False}), 401
-    return jsonify({"logged_in": True})
+    data, err = _validate_token()
+    if err:
+        msg, code = err
+        return jsonify({"logged_in": False, "error": msg}), code
+    username = data.get("username") or data.get("user") or sess.get("username")
+    if username and not sess.get("username"):
+        sess["username"] = username
+        SESSIONS[session_id] = sess
+    return jsonify({"logged_in": True, "username": username, "login_at": sess.get("login_at")})
 
 
 @app.route("/session/logout", methods=["POST"])
@@ -193,6 +210,15 @@ def grades():
         msg, code = err
         return jsonify({"error": msg}), code
     return jsonify({"user": data["username"], "grades": GRADES})
+
+
+@app.route("/profile", methods=["GET"])
+def profile():
+    data, err = _validate_token()
+    if err:
+        msg, code = err
+        return jsonify({"error": msg}), code
+    return jsonify({"user": data["username"], "profile": PROFILE})
 
 
 if __name__ == "__main__":

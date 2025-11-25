@@ -1,6 +1,6 @@
-# 教务数据库初始化
+# 教务数据库初始化（MySQL 版）
 
-本方案使用 SQLite 作为轻量级演示存储，后续可平滑迁移到 MySQL/PostgreSQL。
+目前推荐使用 MySQL，已提供兼容脚本 `db/schema.mysql.sql`。
 
 ## 表设计
 - `users`：账号/密码哈希/角色（student|teacher）。
@@ -8,14 +8,21 @@
 - `courses`：课程，关联授课教师。
 - `enrollments`：选课关系，含课程成绩；用于教师在课程管理页增删学生和改分。
 
-## 创建数据库
-1. 安装 sqlite3（示例：`sudo apt-get install sqlite3`）。
-2. 在项目根目录执行：  
-   ```bash
-   sqlite3 db/academic.db < db/schema.sql
+## 在 MySQL 创建数据库
+1. 安装 MySQL 服务（示例）：`sudo apt-get install -y mysql-server`
+2. 创建库与账号（进入 `sudo mysql`）：  
+   ```sql
+   CREATE DATABASE academic CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   CREATE USER 'academic_user'@'localhost' IDENTIFIED BY '强密码';
+   GRANT ALL PRIVILEGES ON academic.* TO 'academic_user'@'localhost';
+   FLUSH PRIVILEGES;
    ```
-3. 生成的数据库文件位于 `db/academic.db`。
+3. 导入结构与示例数据（在仓库根目录执行）：  
+   ```bash
+   mysql -u academic_user -p academic < db/schema.mysql.sql
+   ```
+   请先将脚本中的 `REPLACE_ME_HASH` 替换为真实的密码哈希（如 bcrypt）。
 
-## 迁移到其他数据库的提示
-- 将 `schema.sql` 中的自增类型/时间默认值适配目标数据库（如改为 SERIAL/TIMESTAMP）。
-- 创建用户/库并导入结构：`psql -f schema.sql` 或 `mysql < schema.sql` 等（注意语法差异）。
+## 其他数据库/SQLite
+- 若继续用 SQLite，可使用 `db/schema.sql`，命令：`sqlite3 db/academic.db < db/schema.sql`。
+- 迁移到 PostgreSQL 时，将自增/时间字段语法调整为 SERIAL/TIMESTAMP 等后再导入。

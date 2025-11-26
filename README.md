@@ -18,8 +18,7 @@ SSO OAuth2.0 + 简易CA 演示
 pip install -r requirements.txt
 ```
 
-2) 配置并启动Mysql服务
-   详见[](./db/README.md)
+2) 配置并启动Mysql服务 详见 [db/README.md](./db/README.md)
 
 3) 生成自建 CA 与服务器/客户端证书（放在 `certs/`，演示用开发证书，不建议生产）：
 ```

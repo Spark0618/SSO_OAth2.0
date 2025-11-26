@@ -29,6 +29,11 @@
         <input v-model="username" placeholder="carol" />
         <label>密码</label>
         <input type="password" v-model="password" placeholder="strong-password" />
+        <label>账号类型</label>
+        <select v-model="role">
+          <option value="student">学生</option>
+          <option value="teacher">教师</option>
+        </select>
         <label>证书指纹（可选，用于 mTLS 绑定）</label>
         <input v-model="fingerprint" placeholder="sha256 fingerprint" />
         <button @click="register">注册</button>
@@ -64,6 +69,7 @@
             base: "https://auth.localhost:5000",
             username: "carol",
             password: "password123",
+            role: "student",
             fingerprint: "",
             sessionToken: "",
             users: {},
@@ -90,7 +96,12 @@
               method: "POST",
               credentials: "include",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ username: this.username, password: this.password, cert_fingerprint: this.fingerprint || undefined }),
+              body: JSON.stringify({
+                username: this.username,
+                password: this.password,
+                role: this.role,
+                cert_fingerprint: this.fingerprint || undefined,
+              }),
             });
             const data = await res.json();
             if (!res.ok) { alert(JSON.stringify(data)); return; }

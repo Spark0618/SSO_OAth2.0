@@ -18,7 +18,10 @@ SSO OAuth2.0 + 简易CA 演示
 pip install -r requirements.txt
 ```
 
-2) 生成自建 CA 与服务器/客户端证书（放在 `certs/`，演示用开发证书，不建议生产）：
+2) 配置并启动Mysql服务
+   详见[](./db/README.md)
+
+3) 生成自建 CA 与服务器/客户端证书（放在 `certs/`，演示用开发证书，不建议生产）：
 ```
 cd certs
 ./create_ca.sh             # 生成 ca.key / ca.crt
@@ -29,30 +32,30 @@ cd certs
 ```
 > 前端浏览器需信任 `certs/ca.crt` 方可完成“单向认证”示例；若要演示双向认证，请将客户端证书导入浏览器 / curl，并在反向代理里启用 mTLS，把客户端证书信息转成 `X-Client-Cert` 头给后端验证。
 
-3) 运行服务（每个新终端一个进程）：
+4) 运行服务（每个新终端一个进程）：
 ```
 # 认证服务器 (默认端口 5000)
-FLASK_APP=auth-server/app.py flask run --cert=certs/auth-server.crt --key=certs/auth-server.key -p 5000
+FLASK_APP=auth-server/app.py python -m flask run --cert=certs/auth-server.crt --key=certs/auth-server.key -p 5000
 
 # 教务 API (默认端口 5001)
-FLASK_APP=academic-api/app.py flask run --cert=certs/academic-api.crt --key=certs/academic-api.key -p 5001
+FLASK_APP=academic-api/app.py python -m flask run --cert=certs/academic-api.crt --key=certs/academic-api.key -p 5001
 
 # 云盘 API (默认端口 5002)
-FLASK_APP=cloud-api/app.py flask run --cert=certs/cloud-api.crt --key=certs/cloud-api.key -p 5002
+FLASK_APP=cloud-api/app.py python -m flask run --cert=certs/cloud-api.crt --key=certs/cloud-api.key -p 5002
 ```
 > Flask 内置 TLS 不支持双向认证，请在需要 mTLS 时用 Nginx/Traefik/Caddy 终止 TLS，并将客户端证书（PEM 或指纹）通过请求头转发给后端，后端会在 `request.headers["X-Client-Cert"]` 检查。
 
-4) hosts 绑定并启动前端（模拟不同站点域名）：
+5) hosts 绑定并启动前端（模拟不同站点域名）：
 - 在 hosts 添加：`127.0.0.1 auth.localhost academic.localhost cloud.localhost`
 - 重新生成服务端证书（SAN 已含上述域名）：`cd certs && ./create_server.sh auth-server` 等
-- 启动静态HTTPS服务器（示例占用 3 个端口，分别映射不同站点）：
+- 启动静态HTTPS服务器（示例占用 3 个端口，分别映射不同站点）（打开三个终端分别执行）：
 ```
 # 教务前端
 cd frontends/academic && python ../https_server.py --ssl-cert ../../certs/academic-api.crt --ssl-key ../../certs/academic-api.key --port 4174
 # 云盘前端
-cd ../cloud && python ../https_server.py --ssl-cert ../../certs/cloud-api.crt --ssl-key ../../certs/cloud-api.key --port 4176
+cd frontends/cloud && python ../https_server.py --ssl-cert ../../certs/cloud-api.crt --ssl-key ../../certs/cloud-api.key --port 4176
 # 认证门户
-cd ../auth && python ../https_server.py --ssl-cert ../../certs/auth-server.crt --ssl-key ../../certs/auth-server.key --port 4173
+cd frontends/auth && python ../https_server.py --ssl-cert ../../certs/auth-server.crt --ssl-key ../../certs/auth-server.key --port 4173
 ```
 分别打开：
 - 教务前端：`https://academic.localhost:4174/academic.html`

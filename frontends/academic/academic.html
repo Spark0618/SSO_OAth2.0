@@ -6,40 +6,260 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
       body { font-family: "Segoe UI", sans-serif; margin: 0; background: linear-gradient(135deg,#f2f4ff,#e6f3ff); color:#1f2937; }
-      header { padding: 16px 24px; background: #0f172a; color: #e2e8f0; }
-      main { padding: 24px; max-width: 960px; margin: auto; }
-      .card { background: #fff; border-radius: 12px; box-shadow: 0 8px 18px rgba(15,23,42,0.08); padding: 16px 20px; margin-bottom: 16px; }
-      input, button { padding: 8px 10px; font-size: 14px; border-radius: 8px; border: 1px solid #d9e0e8; }
-      button { background: #2563eb; color: #fff; border: none; cursor: pointer; }
-      button.secondary { background: #0ea5e9; }
-      button:disabled { opacity: 0.6; cursor: not-allowed; }
+      header { display:flex; align-items:center; justify-content:space-between; padding: 16px 24px; background: #0f172a; color: #e2e8f0; box-shadow: 0 6px 18px rgba(0,0,0,0.15); position:sticky; top:0; z-index:10; }
+      .brand h2 { margin:0 0 4px 0; font-size:20px; letter-spacing:0.5px; }
+      .brand p { margin:0; color:#94a3b8; font-size:13px; }
+      main { padding: 24px; max-width: 1280px; margin: auto; }
+      .card { background: #fff; border-radius: 16px; box-shadow: 0 8px 18px rgba(15,23,42,0.08); padding: 18px 20px; margin-bottom: 16px; }
+      .card h3 { margin-top:0; }
+      button { padding: 8px 12px; font-size: 14px; border-radius: 10px; border: 1px solid #d9e0e8; background: linear-gradient(135deg,#2563eb,#1d4ed8); color: #fff; cursor: pointer; transition: transform .1s ease, box-shadow .1s ease; }
+      button.secondary { background: linear-gradient(135deg,#0ea5e9,#0284c7); }
+      button:disabled { opacity: 0.6; cursor: not-allowed; box-shadow:none; }
+      button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 14px rgba(37,99,235,0.2); }
+      .session-actions { display:flex; align-items:center; gap:10px; }
+      .badge { background: #e0f2fe; color: #0ea5e9; padding: 4px 10px; border-radius: 999px; font-size: 12px; display:inline-flex; align-items:center; gap:6px; }
+      .badge.danger { background:#fee2e2; color:#dc2626; }
       .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-      .badge { background: #e0f2fe; color: #0ea5e9; padding: 2px 8px; border-radius: 6px; font-size: 12px; }
-      pre { background: #0b1220; color: #cbd5e1; padding: 12px; border-radius: 8px; overflow: auto; }
+      pre { background: #0b1220; color: #cbd5e1; padding: 12px; border-radius: 10px; overflow: auto; }
+      .flex-between { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+      table { width:100%; border-collapse: collapse; margin-top:12px; }
+      th, td { padding:10px 12px; border-bottom:1px solid #e2e8f0; text-align:left; }
+      th { background:#f8fafc; color:#475569; font-weight:600; }
+      .empty { color:#94a3b8; font-size:14px; margin-top:10px; }
+      .pill { background:#eef2ff; color:#4338ca; padding:4px 10px; border-radius:999px; font-size:12px; }
+      .status-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+      input[type="text"] { padding:8px 10px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; min-width:200px; }
+      .muted { color:#64748b; font-size:14px; margin:6px 0 0 0; }
+      .controls { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+      .layout { display:grid; grid-template-columns: 360px 1fr; gap:16px; align-items:start; }
+      @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
+      .timetable { width:100%; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; }
+      .timetable table { margin:0; border-collapse: collapse; width:100%; }
+      .timetable th, .timetable td { border:1px solid #e2e8f0; text-align:center; padding:10px 6px; }
+      .timetable th { background:#f1f5f9; }
+      .slot-label { font-weight:600; color:#475569; }
+      .course-cell { background:#eef2ff; color:#312e81; border-radius:8px; padding:6px 8px; display:inline-block; min-width:90px; cursor:pointer; }
+      .empty-slot { display:block; min-height:24px; }
     </style>
   </head>
   <body>
-    <header>
-      <h2>教务信息站点 · OAuth2.0 SSO</h2>
-    </header>
-    <main id="app">
-      <div class="card">
-        <h3>1) 统一身份认证 (SSO Cookie)</h3>
-        <p>当前状态：<span class="badge" v-if="loggedIn">已登录</span><span v-else>未登录</span></p>
-        <button @click="goLogin">前往登录（302 到统一认证）</button>
-        <button class="secondary" @click="logout" :disabled="loading">退出本系统</button>
-      </div>
-
-      <div class="card">
-        <h3>2) 访问受保护资源</h3>
-        <div style="display:flex; gap:12px; flex-wrap:wrap;">
-          <button @click="loadCourses" :disabled="!loggedIn || loading">获取课程列表</button>
-          <button @click="loadGrades" :disabled="!loggedIn || loading">获取成绩</button>
+    <div id="app">
+      <header>
+        <div class="brand">
+          <h2>教务信息站点</h2>
+          <p>OAuth2.0 SSO 演示</p>
         </div>
-        <h4>结果</h4>
-        <pre>{{ JSON.stringify(result, null, 2) }}</pre>
-      </div>
-    </main>
+        <div class="session-actions">
+          <span class="badge" :class="!loggedIn && 'danger'">{{ loggedIn ? "已登录" : "未登录" }}</span>
+          <button v-if="!loggedIn" @click="goLogin" :disabled="loading">统一认证登录</button>
+          <button v-if="loggedIn" class="secondary" @click="logout" :disabled="loading">退出</button>
+        </div>
+      </header>
+      <main>
+        <div class="layout">
+          <div class="left-col">
+            <div class="card">
+              <div class="flex-between">
+                <div>
+                  <h3>统一身份认证 (SSO Cookie)</h3>
+                  <p class="pill">状态：{{ loggedIn ? "已登录，可以访问受保护接口" : "未登录，先跳转统一认证" }}</p>
+                  <p class="muted">当前用户：{{ userInfo.username || "未登录" }}</p>
+                  <p class="muted">权限：{{ roleLabel }}</p>
+                </div>
+                <div class="status-bar">
+                  <span class="badge">{{ message || "等待操作..." }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="flex-between">
+                <div>
+                  <h3>我的信息</h3>
+                </div>
+                <span class="badge" :class="!loggedIn && 'danger'">{{ userInfo.username || "未获取" }}</span>
+              </div>
+              <p class="muted">用户名：{{ userInfo.username || "请先登录" }} <span v-if="role">（{{ role === 'teacher' ? '教师' : '学生' }}）</span></p>
+              <p class="muted">最近登录：{{ userInfo.loginAt || (loggedIn ? "未返回时间" : "请先登录") }}</p>
+              <p style="margin-top:8px;">
+                <a href="profile.html" style="color:#2563eb; text-decoration:none;">查看详细信息页 →</a>
+              </p>
+            </div>
+
+            <div class="card">
+              <h3>其他业务</h3>
+              <div class="grid">
+                <button @click="goCloud" :disabled="loading">我的云盘</button>
+                <button :disabled="true">选课平台（后续添加）</button>
+                <button :disabled="true">缴费平台（后续添加）</button>
+                <button :disabled="true">校历查询（后续添加）</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="right-col">
+            <div class="card">
+              <div class="flex-between">
+                <div>
+                  <h3>受保护资源</h3>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                  <button @click="loadCourses" :disabled="!loggedIn || loading">课表</button>
+                  <button class="secondary" @click="role === 'teacher' ? loadManage() : loadGrades()" :disabled="!loggedIn || loading">
+                    {{ role === 'teacher' ? "管理" : "成绩" }}
+                  </button>
+                </div>
+              </div>
+
+              <div v-if="lastFetch === 'courses'">
+                <div class="flex-between" style="margin-bottom:6px;">
+                  <h4 style="margin:0;">课表 (6 x 7)</h4>
+                  <button class="secondary" @click="downloadJSON" :disabled="!courses.length">导出 JSON</button>
+                </div>
+                <div class="timetable">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>时间</th>
+                        <th v-for="day in weekdays" :key="day">{{ day }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(slot, idx) in timeSlots" :key="slot">
+                        <td class="slot-label">{{ slot }}</td>
+                        <td v-for="dayIdx in 7" :key="dayIdx">
+                          <span
+                            v-if="grid[idx][dayIdx - 1]"
+                            class="course-cell"
+                            @click="showCourse(grid[idx][dayIdx - 1])"
+                          >
+                            {{ grid[idx][dayIdx - 1].label }}
+                          </span>
+                          <span v-else class="empty-slot">&nbsp;</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div v-else-if="lastFetch === 'grades'">
+                <div class="flex-between" style="margin-bottom:6px;">
+                  <h4 style="margin:0;">成绩</h4>
+                  <div class="controls">
+                    <input type="text" v-model="searchQuery" placeholder="按课程号或名称搜索" />
+                    <button @click="downloadCSV" :disabled="!tableRows.length">导出 CSV</button>
+                    <button class="secondary" @click="downloadJSON" :disabled="!tableRows.length">导出 JSON</button>
+                  </div>
+                </div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th v-for="col in tableColumns" :key="col">{{ col }}</th>
+                    </tr>
+                  </thead>
+                  <tbody v-if="filteredRows.length">
+                    <tr v-for="(row, idx) in filteredRows" :key="idx">
+                      <td v-for="col in tableColumns" :key="col">{{ row[col] }}</td>
+                    </tr>
+                  </tbody>
+                  <tbody v-else>
+                    <tr>
+                      <td :colspan="tableColumns.length" class="empty">暂无数据</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div v-else-if="lastFetch === 'manage'">
+                <div class="flex-between" style="margin-bottom:6px;">
+                  <h4 style="margin:0;">课程管理</h4>
+                  <select v-model="selectedCourse" @change="loadCourseStudents" style="padding:6px 10px; border-radius:8px; border:1px solid #cbd5e1;">
+                    <option disabled value="">选择课程</option>
+                    <option v-for="c in courses" :key="c.code" :value="c.code">{{ c.code }} {{ c.title }}</option>
+                  </select>
+                </div>
+                <div style="margin-bottom:10px; border:1px solid #e2e8f0; border-radius:10px; padding:10px;">
+                  <div class="flex-between">
+                    <div>
+                      <strong>创建新课程</strong>
+                      <p class="muted">填写课程号和名称（可选描述）</p>
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                      <input style="width:120px;" v-model="newCourse.code" placeholder="课程号" />
+                      <input style="width:160px;" v-model="newCourse.title" placeholder="课程名称" />
+                      <input style="width:200px;" v-model="newCourse.desc" placeholder="描述（可选）" />
+                      <button @click="createCourse" :disabled="!newCourse.code || !newCourse.title">创建</button>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="selectedCourse" style="margin-bottom:10px; border:1px solid #e2e8f0; border-radius:10px; padding:10px;">
+                  <div class="flex-between">
+                    <div>
+                      <strong>课表时间</strong>
+                      <p class="muted">选择周次与节次，保存后课表同步更新</p>
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                      <select v-model.number="scheduleForm.day" style="padding:6px 10px; border-radius:8px; border:1px solid #cbd5e1;">
+                        <option :value="d.value" v-for="d in dayOptions" :key="d.value">{{ d.label }}</option>
+                      </select>
+                      <select v-model.number="scheduleForm.slot" style="padding:6px 10px; border-radius:8px; border:1px solid #cbd5e1;">
+                        <option :value="idx + 1" v-for="(t, idx) in timeSlots" :key="t">{{ idx + 1 }} ({{ t }})</option>
+                      </select>
+                      <button class="secondary" @click="saveSchedule">保存时间</button>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="selectedCourse">
+                  <div class="flex-between" style="margin-bottom:8px;">
+                    <div>
+                      <strong>学生列表</strong>
+                      <p class="muted">点击学生可编辑成绩，右侧可添加/删除学生</p>
+                    </div>
+                    <div class="controls">
+                      <input type="text" v-model="studentSearch" placeholder="搜索学生/学号" @input="filterStudents" />
+                      <button class="secondary" @click="loadAllStudents">加载所有学生</button>
+                    </div>
+                  </div>
+                  <div style="display:grid; grid-template-columns: 2fr 1fr; gap:12px;">
+                    <div style="max-height:360px; overflow:auto; border:1px solid #e2e8f0; border-radius:10px; padding:8px;">
+                      <div v-if="courseStudents.length === 0" class="muted" style="text-align:center; padding:12px 0;">暂无学生，先添加或刷新</div>
+                      <div v-for="stu in courseStudents" :key="stu.student_no" style="display:flex; align-items:center; justify-content:space-between; padding:6px 4px; border-bottom:1px solid #e2e8f0;">
+                        <div>
+                          <div style="font-weight:600;">{{ stu.name }} ({{ stu.student_no }})</div>
+                          <div class="muted">成绩：{{ stu.grade || "未录入" }}</div>
+                        </div>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                          <input style="width:80px;" v-model="stu.editGrade" placeholder="成绩" />
+                          <button @click="saveGrade(stu)">保存</button>
+                          <button class="secondary" @click="removeStudent(stu)">移除</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div style="max-height:360px; overflow:auto; border:1px solid #e2e8f0; border-radius:10px; padding:8px;">
+                      <div style="font-weight:600; margin-bottom:6px;">添加学生</div>
+                      <div v-if="filteredAllStudents.length === 0" class="muted" style="text-align:center; padding:12px 0;">暂无可选学生，点击刷新全量学生</div>
+                      <div v-for="stu in filteredAllStudents" :key="stu.student_no" style="padding:6px 4px; border-bottom:1px dashed #e2e8f0; cursor:pointer;" @click="addStudent(stu)">
+                        {{ stu.name }} ({{ stu.student_no }})
+                        <span class="muted"> {{ stu.major || stu.college || '' }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="empty">请选择课程进行管理</div>
+              </div>
+
+              <div v-else class="empty">尚未拉取数据或格式不符合预期。</div>
+
+              <details style="margin-top:12px;">
+                <summary>查看原始 JSON</summary>
+                <pre>{{ JSON.stringify(rawResult, null, 2) }}</pre>
+              </details>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
 
     <script>
       const { createApp } = Vue;
@@ -49,8 +269,33 @@
             authBase: "https://auth.localhost:5000",
             apiBase: "https://academic.localhost:5001",
             loggedIn: false,
-            result: {},
+            rawResult: {},
             loading: false,
+            courses: [],
+            grades: {},
+            lastFetch: "",
+            message: "",
+            userInfo: { username: "", loginAt: "" },
+            role: "",
+            searchQuery: "",
+            manageLoaded: false,
+            selectedCourse: "",
+            courseStudents: [],
+            studentSearch: "",
+            allStudents: [],
+            newCourse: { code: "", title: "", desc: "" },
+            scheduleForm: { day: 1, slot: 1 },
+            dayOptions: [
+              { value: 1, label: "周一" },
+              { value: 2, label: "周二" },
+              { value: 3, label: "周三" },
+              { value: 4, label: "周四" },
+              { value: 5, label: "周五" },
+              { value: 6, label: "周六" },
+              { value: 7, label: "周日" },
+            ],
+            weekdays: ["周一", "周二", "周三", "周四", "周五", "周六", "周日"],
+            timeSlots: ["08:00-09:30", "09:45-11:15", "11:30-13:00", "13:30-15:00", "15:15-16:45", "17:00-18:30"],
           };
         },
         mounted() {
@@ -61,16 +306,38 @@
             window.location.href = `${this.apiBase}/session/login`;
           },
           async checkStatus() {
-            const res = await fetch(`${this.apiBase}/session/status`, { credentials: "include" });
-            this.loggedIn = res.ok;
+            try {
+              const res = await fetch(`${this.apiBase}/session/status`, { credentials: "include" });
+              const data = await res.json();
+              this.loggedIn = res.ok && data.logged_in;
+              if (this.loggedIn) {
+                const username = data.username || data.user || "未知用户";
+                this.userInfo.username = username;
+                this.userInfo.loginAt = data.login_at ? this.formatTime(data.login_at) : "";
+                this.role = data.role || "";
+                this.message = "认证 cookie 可用";
+                if (!this.lastFetch && !this.loading) {
+                  // 登录后默认拉取课表
+                  this.loadCourses();
+                }
+              } else {
+              this.userInfo = { username: "", loginAt: "" };
+              this.role = "";
+              this.message = "请先登录";
+            }
+          } catch (e) {
+            this.loggedIn = false;
+            this.userInfo = { username: "", loginAt: "" };
+              this.message = "状态检查失败";
+            }
           },
-          async loadCourses() {
-            await this.fetchProtected("/courses");
+          async loadCourses(setView = true) {
+            await this.fetchProtected("/courses", "courses", setView);
           },
           async loadGrades() {
-            await this.fetchProtected("/grades");
+            await this.fetchProtected("/grades", "grades");
           },
-          async fetchProtected(path) {
+          async fetchProtected(path, type, setView = true) {
             if (!this.loggedIn) {
               alert("请先登录");
               return;
@@ -80,21 +347,314 @@
               const res = await fetch(`${this.apiBase}${path}`, {
                 credentials: "include",
               });
-              const data = await res.json();
-              this.result = data;
-              if (!res.ok) throw new Error(JSON.stringify(data));
+              const text = await res.text();
+              let data;
+              try {
+                data = JSON.parse(text);
+              } catch (e) {
+                throw new Error("服务返回非 JSON 响应");
+              }
+              if (!res.ok) throw new Error(typeof data === "object" ? JSON.stringify(data) : res.statusText);
+              this.rawResult = data;
+              this.message = "数据已获取";
+              if (data.user || data.username) this.userInfo.username = data.user || data.username;
+              if (type === "courses") {
+                if (!Array.isArray(data.courses)) throw new Error("返回的课程数据格式不正确");
+                this.courses = data.courses;
+                if (setView) this.lastFetch = "courses";
+                this.searchQuery = "";
+              }
+              if (type === "grades") {
+                if (!data.grades || typeof data.grades !== "object") throw new Error("返回的成绩数据格式不正确");
+                this.grades = data.grades;
+                this.lastFetch = "grades";
+                this.searchQuery = "";
+              }
             } catch (e) {
               alert(e.message);
+              this.message = e.message;
+              this.rawResult = {};
+              this.lastFetch = "";
             } finally {
               this.loading = false;
             }
           },
-          logout() {
-            fetch(`${this.apiBase}/session/logout`, { method: "POST", credentials: "include" });
+          async logout() {
+            await fetch(`${this.apiBase}/session/logout`, { method: "POST", credentials: "include" });
             this.loggedIn = false;
+            this.courses = [];
+            this.grades = {};
+            this.rawResult = {};
+            this.lastFetch = "";
+            this.message = "已退出";
+            this.userInfo = { username: "", loginAt: "" };
+            this.role = "";
+            this.searchQuery = "";
+            this.manageLoaded = false;
+            this.courseStudents = [];
+            this.selectedCourse = "";
+            this.allStudents = [];
+          },
+          goCloud() {
+            window.location.href = "https://cloud.localhost:4176/cloud.html";
+          },
+          async loadManage() {
+            this.lastFetch = "manage";
+            await this.loadCourses(false);
+            if (this.courses.length) {
+              this.selectedCourse = this.courses[0].code;
+              const first = this.courses[0];
+              this.scheduleForm.day = Number(first.day) || 1;
+              this.scheduleForm.slot = Number(first.slot) || 1;
+              await this.loadCourseStudents();
+            }
+            await this.loadAllStudents();
+          },
+          async createCourse() {
+            try {
+              const res = await fetch(`${this.apiBase}/courses/manage`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(this.newCourse),
+              });
+              const text = await res.text();
+              let data = {};
+              try {
+                data = JSON.parse(text);
+              } catch (e) {
+                throw new Error(`创建失败（非 JSON 响应）：${text.slice(0, 120)}`);
+              }
+              if (!res.ok) throw new Error(data.error || "创建失败");
+              await this.loadCourses(false);
+              if (this.courses.length) {
+                this.selectedCourse = data.code || this.courses[0].code;
+                await this.loadCourseStudents();
+              }
+              this.newCourse = { code: "", title: "", desc: "" };
+              alert("课程已创建");
+            } catch (e) {
+              alert(e.message);
+            }
+          },
+          showCourse(cell) {
+            if (!cell) return;
+            const parts = [
+              `课程：${cell.label}`,
+              cell.code ? `课程号：${cell.code}` : "",
+              cell.location ? `教室：${cell.location}` : "",
+              cell.desc ? `简介：${cell.desc}` : "",
+            ].filter(Boolean);
+            alert(parts.join("\n"));
+          },
+          async loadCourseStudents() {
+            if (!this.selectedCourse) return;
+            const current = this.courses.find((c) => c.code === this.selectedCourse);
+            if (current) {
+              this.scheduleForm.day = Number(current.day) || 1;
+              this.scheduleForm.slot = Number(current.slot) || 1;
+            }
+            try {
+              const res = await fetch(`${this.apiBase}/courses/${this.selectedCourse}/students`, { credentials: "include" });
+              const text = await res.text();
+              let data = {};
+              try { data = JSON.parse(text); } catch (e) { throw new Error(`获取课程学生失败（非JSON）：${text.slice(0,120)}`); }
+              if (!res.ok) throw new Error(data.error || "获取课程学生失败");
+              this.courseStudents = (data.students || []).map((s) => ({ ...s, editGrade: s.grade || "" }));
+            } catch (e) {
+              alert(e.message);
+            }
+          },
+          async loadAllStudents() {
+            try {
+              const res = await fetch(`${this.apiBase}/students`, { credentials: "include" });
+              const text = await res.text();
+              let data = {};
+              try { data = JSON.parse(text); } catch (e) { throw new Error(`获取学生列表失败（非JSON）：${text.slice(0,120)}`); }
+              if (!res.ok) throw new Error(data.error || "获取学生列表失败");
+              this.allStudents = data.students || [];
+            } catch (e) {
+              alert(e.message);
+            }
+          },
+          filterStudents() {
+            this.studentSearch = this.studentSearch;
+          },
+          async addStudent(stu) {
+            if (!this.selectedCourse) return;
+            const res = await fetch(`${this.apiBase}/courses/${this.selectedCourse}/students`, {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ student_no: stu.student_no }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+              alert(data.error || "添加失败");
+              return;
+            }
+            await this.loadCourseStudents();
+            alert("已添加");
+          },
+          async removeStudent(stu) {
+            if (!this.selectedCourse) return;
+            const res = await fetch(`${this.apiBase}/courses/${this.selectedCourse}/students`, {
+              method: "DELETE",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ student_no: stu.student_no }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+              alert(data.error || "移除失败");
+              return;
+            }
+            await this.loadCourseStudents();
+          },
+          async saveGrade(stu) {
+            if (!this.selectedCourse) return;
+            const res = await fetch(`${this.apiBase}/courses/${this.selectedCourse}/grade`, {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ student_no: stu.student_no, grade: stu.editGrade }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+              alert(data.error || "保存失败");
+              return;
+            }
+            await this.loadCourseStudents();
+          },
+          async saveSchedule() {
+            if (!this.selectedCourse) return;
+            try {
+              const res = await fetch(`${this.apiBase}/courses/${this.selectedCourse}/schedule`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ day: this.scheduleForm.day, slot: this.scheduleForm.slot }),
+              });
+              const text = await res.text();
+              let data = {};
+              try { data = JSON.parse(text); } catch (e) { throw new Error(`保存失败（非JSON）：${text.slice(0,120)}`); }
+              if (!res.ok) throw new Error(data.error || "保存失败");
+              await this.loadCourses(false);
+              await this.loadCourseStudents();
+              alert("时间已更新");
+            } catch (e) {
+              alert(e.message);
+            }
+          },
+          formatTime(ts) {
+            const date = new Date(ts * 1000);
+            return date.toLocaleString("zh-CN", { hour12: false });
+          },
+          downloadJSON() {
+            const exportData = this.lastFetch === "grades" ? this.filteredRows : this.courses;
+            if (!exportData.length) {
+              alert("没有可导出的数据");
+              return;
+            }
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+            this.saveBlob(blob, `${this.tableTitle || "数据"}.json`);
+          },
+          downloadCSV() {
+            if (!this.filteredRows.length) {
+              alert("没有可导出的数据");
+              return;
+            }
+            const cols = this.tableColumns;
+            const rows = this.filteredRows.map((row) =>
+              cols.map((c) => `"${String(row[c] ?? "").replace(/"/g, '""')}"`).join(",")
+            );
+            const csv = [cols.join(","), ...rows].join("\n");
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            this.saveBlob(blob, `${this.tableTitle || "数据"}.csv`);
+          },
+          saveBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
           },
           toast(msg) {
             console.log(msg);
+          },
+        },
+        computed: {
+          roleLabel() {
+            if (this.role === "teacher") return "教师";
+            if (this.role === "student") return "学生";
+            return "未知";
+          },
+          tableColumns() {
+            if (this.lastFetch === "courses") return ["课程号", "课程名称"];
+            if (this.lastFetch === "grades") return ["课程号", "成绩"];
+            return [];
+          },
+          tableRows() {
+            if (this.lastFetch === "courses") {
+              return this.courses.map((c) => ({
+                课程号: c.code || "-",
+                课程名称: c.title || c.name || "-",
+              }));
+            }
+            if (this.lastFetch === "grades") {
+              return Object.entries(this.grades).map(([code, grade]) => ({
+                课程号: code,
+                成绩: grade,
+              }));
+            }
+            return [];
+          },
+          filteredRows() {
+            const rows = this.tableRows;
+            if (!this.searchQuery.trim()) return rows;
+            const keyword = this.searchQuery.trim().toLowerCase();
+            return rows.filter((row) =>
+              Object.values(row).some((val) => String(val || "").toLowerCase().includes(keyword))
+            );
+          },
+          filteredAllStudents() {
+            if (!this.studentSearch.trim()) return this.allStudents;
+            const kw = this.studentSearch.trim().toLowerCase();
+            return this.allStudents.filter(
+              (s) =>
+                String(s.name || "").toLowerCase().includes(kw) ||
+                String(s.student_no || "").toLowerCase().includes(kw)
+            );
+          },
+          grid() {
+            // 6 行（timeSlots）、7 列（周一至周日）的课表矩阵
+            const matrix = Array.from({ length: this.timeSlots.length }, () =>
+              Array.from({ length: this.weekdays.length }, () => null)
+            );
+            this.courses.forEach((c) => {
+              const day = Number(c.day || c.weekday || c.week_day || c.dayOfWeek);
+              const slot = Number(c.slot || c.section || c.period);
+              if (Number.isInteger(day) && Number.isInteger(slot)) {
+                const dayIdx = day - 1;
+                const slotIdx = slot - 1;
+                if (dayIdx >= 0 && dayIdx < 7 && slotIdx >= 0 && slotIdx < matrix.length) {
+                  const label = `${c.code || ""} ${c.title || c.name || ""}`.trim() || "课程";
+                  matrix[slotIdx][dayIdx] = {
+                    label,
+                    code: c.code,
+                    location: c.location,
+                    desc: c.desc,
+                  };
+                }
+              }
+            });
+            return matrix;
+          },
+          tableTitle() {
+            if (this.lastFetch === "courses") return "课表";
+            if (this.lastFetch === "grades") return "成绩";
+            return "待展示";
           },
         },
       }).mount("#app");

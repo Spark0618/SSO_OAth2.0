@@ -3,4 +3,7 @@
 *.srl
 *.csr
 *.ext
+.python-version
 __pycache__/
+venv/
+.venv/

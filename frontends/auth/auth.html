@@ -1,133 +1,1136 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
+<head>
+    <meta charset="UTF-8">
     <title>统一身份认证门户</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <style>
-      body { font-family: "Segoe UI", sans-serif; background:#f5f7fb; margin:0; color:#1f2937; }
-      header { background:#111827; color:#e5e7eb; padding: 18px 24px; }
-      main { max-width: 900px; margin:auto; padding: 20px; }
-      .card { background:#fff; border-radius: 12px; box-shadow: 0 8px 18px rgba(0,0,0,0.08); padding: 16px 20px; margin-bottom: 16px; }
-      input, button, textarea { padding: 8px 10px; font-size: 14px; border-radius: 8px; border: 1px solid #d1d5db; width: 100%; box-sizing: border-box; }
-      button { background:#2563eb; color:#fff; cursor:pointer; border:none; width:auto; }
-      button.secondary { background:#10b981; }
-      pre { background:#0f172a; color:#e2e8f0; padding: 12px; border-radius: 8px; overflow:auto; }
-      ul { list-style:none; padding:0; }
-      li { padding:6px 0; border-bottom:1px dashed #e5e7eb; }
+        :root {
+            --primary: #2563eb;
+            --primary-light: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-500: #6b7280;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            background-color: #f8fafc;
+            color: var(--gray-800);
+            line-height: 1.5;
+            min-height: 100vh;
+            padding-bottom: 2rem;
+        }
+
+        header {
+            background-color: var(--gray-900);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .logo i {
+            color: var(--primary-light);
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-title i {
+            color: var(--primary);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 0.75rem;
+            font-size: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--gray-300);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+        }
+
+        button:hover {
+            background-color: var(--primary-light);
+        }
+
+        button.secondary {
+            background-color: var(--success);
+        }
+
+        button.secondary:hover {
+            background-color: #059669;
+        }
+
+        button.danger {
+            background-color: var(--danger);
+        }
+
+        button.danger:hover {
+            background-color: #dc2626;
+        }
+
+        button:disabled {
+            background-color: var(--gray-300);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            width: auto;
+        }
+
+        .auth-container {
+            max-width: 400px;
+            margin: 4rem auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .dashboard {
+            display: block;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .table th, .table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .table th {
+            background-color: var(--gray-100);
+            font-weight: 600;
+        }
+
+        .table tr:hover {
+            background-color: var(--gray-50);
+        }
+
+        .table tr.revoked-row {
+            background-color: rgba(239, 68, 68, 0.05);
+        }
+
+        .status {
+            padding: 0.25rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .status-valid {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .status-revoked {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .toast {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            background-color: white;
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+            max-width: 300px;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast-success {
+            border-left: 4px solid var(--success);
+        }
+
+        .toast-error {
+            border-left: 4px solid var(--danger);
+        }
+
+        .toast-warning {
+            border-left: 4px solid var(--warning);
+        }
+
+        .toast-header {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .confirm-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1001;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .confirm-modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            max-width: 400px;
+            width: 90%;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+        }
+
+        .confirm-modal.show .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--gray-800);
+        }
+
+        .modal-body {
+            margin-bottom: 1.5rem;
+            color: var(--gray-700);
+        }
+
+        .platform-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .user-details {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .role-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            background-color: var(--gray-100);
+            color: var(--gray-700);
+        }
+
+        a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .form-hint {
+            font-size: 0.875rem;
+            color: var(--gray-500);
+            margin-top: 0.25rem;
+        }
+
+        /* 加载动画 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--gray-200);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .table-responsive {
+                overflow-x: auto;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+
+            .auth-container {
+                margin: 2rem auto;
+            }
+        }
     </style>
-  </head>
-  <body>
-    <header>
-      <h2>统一身份认证门户 (授权服务器)</h2>
-      <p>自建 CA / 用户证书管理 / OAuth 测试</p>
-    </header>
-    <main id="app">
-      <div class="card">
-        <h3>注册用户（可绑定客户端证书指纹）</h3>
-        <label>用户名</label>
-        <input v-model="username" placeholder="carol" />
-        <label>密码</label>
-        <input type="password" v-model="password" placeholder="strong-password" />
-        <label>账号类型</label>
-        <select v-model="role">
-          <option value="student">学生</option>
-          <option value="teacher">教师</option>
-        </select>
-        <label>证书指纹（可选，用于 mTLS 绑定）</label>
-        <input v-model="fingerprint" placeholder="sha256 fingerprint" />
-        <button @click="register">注册</button>
-      </div>
+</head>
+<body>
+    <div id="app">
+        <!-- 全局加载动画 -->
+        <div class="loading-overlay" v-if="isGlobalLoading">
+            <div class="loading-spinner"></div>
+            <div>{{ loadingText }}</div>
+        </div>
 
-      <div class="card">
-        <h3>登录并获取 session_token</h3>
-        <button class="secondary" @click="login">登录</button>
-        <p>session_token: {{ sessionToken || "无" }}</p>
-      </div>
+        <header>
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fa fa-shield"></i>
+                    <span>统一身份认证门户</span>
+                </div>
+                <div id="user-menu">{{ currentUser ? `当前用户: ${currentUser.username}` : '未登录' }}</div>
+            </div>
+        </header>
 
-      <div class="card">
-        <h3>已注册用户与证书</h3>
-        <button @click="loadCerts">刷新列表</button>
-        <ul>
-          <li v-for="(v,k) in users" :key="k">{{ k }} — FP: {{ v.cert_fingerprint || "未绑定" }}</li>
-        </ul>
-      </div>
+        <main>
+            <!-- 登录/注册面板：只有未登录时显示 -->
+            <div id="auth-panel" class="auth-container" v-if="!currentUser && !isGlobalLoading">
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fa fa-user-circle"></i>
+                        <span>用户登录</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-username">用户名</label>
+                        <input id="login-username" v-model="loginUsername" placeholder="请输入用户名" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">密码</label>
+                        <input id="login-password" type="password" v-model="loginPassword" placeholder="请输入密码">
+                        <div class="form-hint">默认测试账号：alice / password123</div>
+                    </div>
+                    <button @click="handleLogin" :disabled="isLoading">
+                        <i v-if="isLoading" class="fa fa-spinner fa-spin"></i>
+                        <i v-else class="fa fa-sign-in"></i>
+                        {{ isLoading ? '登录中...' : '登录' }}
+                    </button>
+                    <p style="text-align: center; margin: 1rem 0;">还没有账号？<a href="#" @click.prevent="showRegister = true">立即注册</a></p>
+                </div>
 
-      <div class="card">
-        <h3>CA 提示</h3>
-        <p>将 <code>certs/ca.crt</code> 导入系统/浏览器信任，可验证服务器证书。</p>
-        <p>客户端证书通过反向代理启用 mTLS，代理应在请求头注入 <code>X-Client-Cert</code> 或 <code>X-Client-Cert-Fingerprint</code>。</p>
-        <pre>curl -v --cert certs/alice.crt --key certs/alice.key https://localhost:5000/health</pre>
-      </div>
-    </main>
+                <div class="card" v-if="showRegister">
+                    <div class="card-title">
+                        <i class="fa fa-user-plus"></i>
+                        <span>用户注册</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-username">用户名</label>
+                        <input id="reg-username" v-model="regUsername" placeholder="请设置用户名" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-password">密码</label>
+                        <input id="reg-password" type="password" v-model="regPassword" placeholder="请设置密码（不少于6位）">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-role">账号类型</label>
+                        <select id="reg-role" v-model="regRole">
+                            <option value="student">学生</option>
+                            <option value="teacher">教师</option>
+                        </select>
+                    </div>
+                    <div class="btn-group">
+                        <button @click="handleRegister" :disabled="isLoading">
+                            <i v-if="isLoading" class="fa fa-spinner fa-spin"></i>
+                            <i v-else class="fa fa-check"></i>
+                            {{ isLoading ? '注册中...' : '注册' }}
+                        </button>
+                        <button class="secondary" @click="showRegister = false" :disabled="isLoading">
+                            <i class="fa fa-arrow-left"></i>
+                            返回登录
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 个人中心面板：只有登录成功后显示 -->
+            <div id="dashboard" class="dashboard" v-if="currentUser && !isGlobalLoading">
+                <div class="user-info">
+                    <div class="user-details">
+                        <div class="avatar">{{ currentUser.username.charAt(0).toUpperCase() }}</div>
+                        <div>
+                            <div style="font-weight: 600;">{{ currentUser.username }}</div>
+                            <div class="role-badge">{{ currentUser.role === 'student' ? '学生' : '教师' }}</div>
+                        </div>
+                    </div>
+                    <button class="btn-sm danger" @click="handleLogout" :disabled="isLoading">
+                        <i v-if="isLoading" class="fa fa-spinner fa-spin"></i>
+                        <i v-else class="fa fa-sign-out"></i>
+                        {{ isLoading ? '退出中...' : '退出登录' }}
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fa fa-graduation-cap"></i>
+                        <span>访问关联平台</span>
+                    </div>
+                    <p>点击下方按钮访问已授权平台（自动完成身份认证）：</p>
+                    <div class="platform-buttons">
+                        <!-- 修复：使用与app.py客户端配置完全匹配的回调地址 -->
+                        <button class="btn-sm" @click="redirectToPlatform('academic-app', 'https://academic.localhost:5001/session/callback')" :disabled="isLoading">
+                            <i class="fa fa-book"></i>
+                            教务信息系统
+                        </button>
+                        <button class="btn-sm" @click="redirectToPlatform('cloud-app', 'https://cloud.localhost:5002/session/callback')" :disabled="isLoading">
+                            <i class="fa fa-cloud"></i>
+                            云盘系统
+                        </button>
+                    </div>
+                    <div class="form-hint" style="margin-top: 0.5rem;">
+                        提示：跳转后将自动完成身份认证，无需重复登录
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fa fa-key"></i>
+                        <span>数字证书管理</span>
+                    </div>
+                    <button class="btn-sm secondary" @click="issueNewCert" :disabled="isLoading">
+                        <i v-if="isLoading" class="fa fa-spinner fa-spin"></i>
+                        <i v-else class="fa fa-plus"></i>
+                        {{ isLoading ? '申请中...' : '申请新证书' }}
+                    </button>
+                    
+                    <div class="table-responsive" style="margin-top: 1rem;">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>证书名称</th>
+                                    <th>序列号</th>
+                                    <th>颁发时间</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="cert in certs" :key="cert.id" :class="cert.status === 'revoked' ? 'revoked-row' : ''">
+                                    <td>{{ cert.name }}</td>
+                                    <td>{{ cert.serial.length > 16 ? cert.serial.substring(0, 16) + '...' : cert.serial }}</td>
+                                    <td>{{ formatDate(cert.issued_at) }}</td>
+                                    <td>
+                                        <span :class="['status', cert.status === 'valid' ? 'status-valid' : 'status-revoked']">
+                                            {{ cert.status === 'valid' ? '有效' : '已撤销' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button 
+                                            class="btn-sm danger" 
+                                            @click="confirmRevoke(cert.id)"
+                                            :disabled="cert.status === 'revoked' || isLoading"
+                                        >
+                                            <i class="fa fa-ban"></i>
+                                            撤销
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr v-if="certs.length === 0 && !isLoading">
+                                    <td colspan="5" style="text-align: center; color: var(--gray-500);">
+                                        暂无证书，请点击"申请新证书"按钮获取
+                                    </td>
+                                </tr>
+                                <tr v-if="isLoading && certs.length === 0">
+                                    <td colspan="5" style="text-align: center; color: var(--gray-500);">
+                                        <i class="fa fa-spinner fa-spin"></i> 加载中...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fa fa-info-circle"></i>
+                        <span>CA 证书说明</span>
+                    </div>
+                    <p>将 <code>certs/ca.crt</code> 导入系统/浏览器信任，可验证服务器证书。</p>
+                    <p>客户端证书通过反向代理启用 mTLS，代理应在请求头注入 <code>X-Client-Cert</code> 或 <code>X-Client-Cert-Fingerprint</code>。</p>
+                    <pre style="background-color: var(--gray-900); color: var(--gray-100); padding: 1rem; border-radius: 0.5rem; margin-top: 0.5rem; font-size: 0.875rem; overflow-x: auto;">
+curl -v --cert certs/alice.crt --key certs/alice.key https://localhost:5000/health</pre>
+                </div>
+            </div>
+        </main>
+
+        <!-- 提示框 -->
+        <div id="toast" class="toast">
+            <div class="toast-header">
+                <i class="fa" id="toast-icon"></i>
+                <span id="toast-title"></span>
+            </div>
+            <div id="toast-message"></div>
+        </div>
+
+        <!-- 确认弹窗 -->
+        <div id="confirmModal" class="confirm-modal">
+            <div class="modal-content">
+                <div class="modal-title">确认撤销证书</div>
+                <div class="modal-body">
+                    您确定要撤销此证书吗？撤销后该证书将无法继续使用，且无法恢复。
+                </div>
+                <div class="btn-group">
+                    <button @click="doRevoke" :disabled="isLoading">
+                        <i v-if="isLoading" class="fa fa-spinner fa-spin"></i>
+                        <i v-else class="fa fa-check"></i>
+                        {{ isLoading ? '处理中...' : '确认' }}
+                    </button>
+                    <button class="secondary" @click="cancelRevoke" :disabled="isLoading">
+                        <i class="fa fa-times"></i>
+                        取消
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
-      const { createApp } = Vue;
-      createApp({
-        data() {
-          return {
-            base: "https://auth.localhost:5000",
-            username: "carol",
-            password: "password123",
-            role: "student",
-            fingerprint: "",
-            sessionToken: "",
-            users: {},
-          };
-        },
-        mounted() {
-          this.loadCerts();
-          const nextRaw = new URLSearchParams(window.location.search).get("next");
-          this.tryAutoLogin(nextRaw);
-        },
-        methods: {
-          async tryAutoLogin(nextRaw){
-            // 尝试使用已登录的会话自动登录
-            const res = await fetch(`${this.base}/auth/session`, { credentials: "include" });
-            if (res.ok) {
-              const data = await res.json();
-              this.sessionToken = data.session_token;
-              // 自动跳转
-              if(nextRaw) window.location.href = decodeURIComponent(nextRaw);
+        const { createApp } = Vue;
+        createApp({
+            data() {
+                return {
+                    base: "https://auth.localhost:5000", // 与app.py的服务地址一致
+                    // 加载状态：区分全局加载和局部加载
+                    isGlobalLoading: true,
+                    isLoading: false,
+                    loadingText: "正在加载...",
+                    // 登录相关
+                    loginUsername: "alice",
+                    loginPassword: "password123",
+                    showRegister: false,
+                    // 注册相关
+                    regUsername: "",
+                    regPassword: "",
+                    regRole: "student",
+                    // 用户信息
+                    currentUser: null,
+                    certs: [],
+                    // 撤销证书相关
+                    certToRevoke: null
+                };
+            },
+            mounted() {
+                // 页面加载时检查登录状态
+                this.$nextTick(() => {
+                    this.checkLoginStatus();
+                });
+            },
+            methods: {
+                // 检查登录状态
+                async checkLoginStatus() {
+                    this.isGlobalLoading = true;
+                    this.loadingText = "正在验证登录状态...";
+
+                    try {
+                        const res = await fetch(`${this.base}/auth/session`, { 
+                            credentials: "include",
+                            headers: {
+                                'Accept': 'application/json'
+                            },
+                            signal: AbortSignal.timeout(5000)
+                        });
+
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.username) {
+                                this.currentUser = {
+                                    username: data.username,
+                                    role: data.role || "student"
+                                };
+                                // 加载证书列表
+                                this.loadCerts().catch(err => {
+                                    console.error("加载证书列表失败:", err);
+                                    this.showToast("警告", "证书列表加载失败，部分功能可能受限", "warning");
+                                });
+                            } else {
+                                this.currentUser = null;
+                            }
+                        } else if (res.status === 401 || res.status === 403) {
+                            this.currentUser = null;
+                        } else {
+                            this.currentUser = null;
+                            this.showToast("错误", "登录状态验证失败", "error");
+                        }
+
+                        // 处理自动跳转（从其他平台跳转过来的情况）
+                        const nextRaw = new URLSearchParams(window.location.search).get("next");
+                        if (nextRaw && this.currentUser) {
+                            setTimeout(() => {
+                                try {
+                                    const nextUrl = decodeURIComponent(nextRaw);
+                                    new URL(nextUrl); // 验证URL合法性
+                                    window.location.href = nextUrl;
+                                } catch (e) {
+                                    console.error("无效的跳转URL:", e);
+                                }
+                            }, 1500);
+                        }
+
+                    } catch (error) {
+                        console.error("检查登录状态失败:", error);
+                        this.currentUser = null;
+                        this.showToast("错误", "网络异常，请刷新页面重试", "error");
+                    } finally {
+                        this.isGlobalLoading = false;
+                    }
+                },
+
+                // 登录处理
+                async handleLogin() {
+                    if (!this.loginUsername.trim()) {
+                        this.showToast("错误", "请输入用户名", "error");
+                        return;
+                    }
+                    if (!this.loginPassword.trim()) {
+                        this.showToast("错误", "请输入密码", "error");
+                        return;
+                    }
+
+                    this.isLoading = true;
+                    try {
+                        const res = await fetch(`${this.base}/auth/login`, {
+                            method: "POST",
+                            credentials: "include",
+                            headers: { 
+                                "Content-Type": "application/json",
+                                "Accept": "application/json"
+                            },
+                            body: JSON.stringify({ 
+                                username: this.loginUsername.trim(), 
+                                password: this.loginPassword.trim() 
+                            }),
+                            signal: AbortSignal.timeout(8000)
+                        });
+
+                        const data = await res.json().catch(() => ({
+                            error: "服务器响应异常"
+                        }));
+
+                        if (res.ok) {
+                            this.currentUser = {
+                                username: data.username || this.loginUsername.trim(),
+                                role: data.role || "student"
+                            };
+                            
+                            this.loadCerts().catch(err => {
+                                console.error("加载证书失败:", err);
+                            });
+                            
+                            this.showToast("成功", "登录成功，欢迎回来！", "success");
+                            this.loginPassword = "";
+
+                            // 处理跳转
+                            const nextRaw = new URLSearchParams(window.location.search).get("next");
+                            if (nextRaw) {
+                                setTimeout(() => {
+                                    try {
+                                        const nextUrl = decodeURIComponent(nextRaw);
+                                        new URL(nextUrl);
+                                        window.location.href = nextUrl;
+                                    } catch (e) {
+                                        console.error("跳转失败:", e);
+                                    }
+                                }, 1500);
+                            }
+                        } else {
+                            this.currentUser = null;
+                            this.showToast("错误", data.error || "登录失败，请检查账号密码", "error");
+                        }
+                    } catch (error) {
+                        console.error("登录失败:", error);
+                        this.currentUser = null;
+                        this.showToast("错误", "网络异常，登录请求超时", "error");
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+
+                // 注册处理
+                async handleRegister() {
+                    if (!this.regUsername.trim()) {
+                        this.showToast("错误", "请设置用户名", "error");
+                        return;
+                    }
+                    if (this.regUsername.trim().length < 3) {
+                        this.showToast("错误", "用户名长度不能少于3位", "error");
+                        return;
+                    }
+                    if (!this.regPassword.trim()) {
+                        this.showToast("错误", "请设置密码", "error");
+                        return;
+                    }
+                    if (this.regPassword.trim().length < 6) {
+                        this.showToast("错误", "密码长度不能少于6位", "error");
+                        return;
+                    }
+
+                    this.isLoading = true;
+                    try {
+                        const res = await fetch(`${this.base}/auth/register`, {
+                            method: "POST",
+                            credentials: "include",
+                            headers: { 
+                                "Content-Type": "application/json",
+                                "Accept": "application/json"
+                            },
+                            body: JSON.stringify({
+                                username: this.regUsername.trim(),
+                                password: this.regPassword.trim(),
+                                role: this.regRole
+                            }),
+                            signal: AbortSignal.timeout(8000)
+                        });
+
+                        const data = await res.json().catch(() => ({
+                            error: "服务器响应异常"
+                        }));
+
+                        if (res.ok) {
+                            this.showToast("成功", "注册成功，即将为您跳转到登录页", "success");
+                            setTimeout(() => {
+                                this.showRegister = false;
+                                this.loginUsername = this.regUsername.trim();
+                                this.regUsername = "";
+                                this.regPassword = "";
+                            }, 1000);
+                        } else {
+                            this.showToast("错误", data.error || "注册失败", "error");
+                        }
+                    } catch (error) {
+                        console.error("注册失败:", error);
+                        this.showToast("错误", "网络异常，注册请求超时", "error");
+                    } finally {
+                        this.isLoading = false;
+                    }
+
+                },
+
+                // 退出登录
+                async handleLogout() {
+                    this.isLoading = true;
+                    try {
+                        await fetch(`${this.base}/auth/logout`, {
+                            method: "POST",
+                            credentials: "include",
+                            signal: AbortSignal.timeout(5000)
+                        });
+                    } catch (error) {
+                        console.error("退出登录接口调用失败:", error);
+                    } finally {
+                        this.currentUser = null;
+                        this.certs = [];
+                        this.loginPassword = "";
+                        this.showToast("信息", "已成功退出登录", "info");
+                        this.isLoading = false;
+                    }
+                },
+
+                // 加载证书列表
+                async loadCerts() {
+                    if (!this.currentUser) return;
+                    
+                    this.isLoading = true;
+                    try {
+                        const res = await fetch(`${this.base}/certs`, {
+                            credentials: "include",
+                            headers: {
+                                'Accept': 'application/json'
+                            },
+                            signal: AbortSignal.timeout(5000)
+                        });
+
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.certs = Array.isArray(data) ? data : [];
+                        } else {
+                            const data = await res.json().catch(() => ({}));
+                            this.showToast("错误", data.error || "获取证书列表失败", "error");
+                            this.certs = [];
+                        }
+                    } catch (error) {
+                        console.error("加载证书失败:", error);
+                        this.showToast("错误", "网络异常，无法加载证书", "error");
+                        this.certs = [];
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+
+                // 申请新证书（与app.py的/ca/issue接口适配）
+                async issueNewCert() {
+                    this.isLoading = true;
+                    try {
+                        const res = await fetch(`${this.base}/ca/issue`, {
+                            method: "POST",
+                            credentials: "include",
+                            headers: {
+                                "Accept": "application/x-pkcs12, application/json"
+                            },
+                            signal: AbortSignal.timeout(30000) // 延长超时时间到30秒
+                        });
+
+                        if (res.ok) {
+                            const contentType = res.headers.get('content-type');
+                            if (contentType && contentType.includes('application/x-pkcs12')) {
+                                const blob = await res.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                
+                                // 处理文件名
+                                const contentDisposition = res.headers.get('Content-Disposition');
+                                let filename = `${this.currentUser.username}.p12`;
+                                if (contentDisposition) {
+                                    const match = contentDisposition.match(/filename="?([^";]+)"?/);
+                                    if (match && match[1]) {
+                                        filename = match[1];
+                                    }
+                                }
+                                
+                                a.href = url;
+                                a.download = filename;
+                                document.body.appendChild(a);
+                                a.click();
+                                
+                                // 清理临时资源
+                                setTimeout(() => {
+                                    document.body.removeChild(a);
+                                    window.URL.revokeObjectURL(url);
+                                }, 100);
+                                
+                                this.showToast("成功", "证书申请成功，正在下载", "success");
+                                // 刷新证书列表
+                                setTimeout(() => this.loadCerts(), 1500);
+                            } else {
+                                this.showToast("错误", "服务器返回非证书文件", "error");
+                            }
+                        } else {
+                            let errorMsg = "";
+                            if (res.status === 401) {
+                                errorMsg = "未授权：请先登录";
+                                setTimeout(() => {
+                                    window.location.href = `${this.base}/login`;
+                                }, 1500);
+                            } else if (res.status === 404) {
+                                errorMsg = "证书文件不存在（后端路径错误），请联系管理员";
+                            } else if (res.status === 500) {
+                                const data = await res.json().catch(() => ({}));
+                                errorMsg = data.error || "服务器生成证书失败，请查看后端日志";
+                            } else if (res.status === 504) {
+                                errorMsg = "证书生成超时，请重试";
+                            } else {
+                                const data = await res.json().catch(() => ({}));
+                                errorMsg = data.error || "证书申请失败";
+                            }
+                            this.showToast("错误", errorMsg, "error");
+                        }
+                    } catch (error) {
+                        console.error("申请证书失败:", error);
+                        let errorMsg;
+                        if (error.name === 'AbortError') {
+                            errorMsg = "请求超时：证书生成时间过长，请重试";
+                        } else if (error.name === 'TypeError') {
+                            errorMsg = "网络错误：无法连接到服务器";
+                        } else {
+                            errorMsg = "证书申请失败：" + error.message;
+                        }
+                        this.showToast("错误", errorMsg, "error");
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+
+                // 证书撤销相关方法
+                confirmRevoke(certId) {
+                    this.certToRevoke = certId;
+                    document.getElementById("confirmModal").classList.add("show");
+                },
+
+                cancelRevoke() {
+                    this.certToRevoke = null;
+                    document.getElementById("confirmModal").classList.remove("show");
+                },
+
+                async doRevoke() {
+                    if (!this.certToRevoke) return;
+
+                    this.isLoading = true;
+                    try {
+                        const res = await fetch(`${this.base}/api/cert/revoke`, {
+                            method: "POST",
+                            credentials: "include",
+                            headers: { 
+                                "Content-Type": "application/json",
+                                "Accept": "application/json"
+                            },
+                            body: JSON.stringify({ id: this.certToRevoke }),
+                            signal: AbortSignal.timeout(5000)
+                        });
+
+                        const data = await res.json().catch(() => ({}));
+                        if (res.ok) {
+                            this.showToast("成功", "证书已成功撤销并移除", "success");
+                            // 从列表中移除该证书
+                            this.certs = this.certs.filter(cert => cert.id !== this.certToRevoke);
+                            this.cancelRevoke();
+                        } else {
+                            this.showToast("错误", data.error || "证书撤销失败", "error");
+                        }
+                    } catch (error) {
+                        console.error("撤销证书失败:", error);
+                        this.showToast("错误", "网络异常，证书撤销失败", "error");
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+
+                // 平台跳转（核心修复：与app.py的OAuth2.0授权流程完全适配）
+                redirectToPlatform(clientId, redirectUri) {
+                    if (this.isLoading) return;
+
+                    try {
+                        this.isLoading = true;
+                        const authServer = this.base;
+                        // 生成随机state参数（防止CSRF攻击）
+                        const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+                        
+                        // 存储state到本地存储，供回调页验证
+                        localStorage.setItem(`oauth_state_${clientId}`, state);
+                        
+                        // 构建标准OAuth2.0授权请求URL
+                        const authUrl = new URL(`${authServer}/auth/authorize`);
+                        authUrl.searchParams.append('response_type', 'code');
+                        authUrl.searchParams.append('client_id', clientId);
+                        authUrl.searchParams.append('redirect_uri', redirectUri);
+                        authUrl.searchParams.append('state', state);
+                        authUrl.searchParams.append('scope', clientId === 'academic-app' ? 'courses.read grades.read' : 'files.read files.write');
+                        
+                        console.log(`跳转授权地址: ${authUrl.toString()}`);
+                        window.location.href = authUrl.toString();
+                    } catch (error) {
+                        console.error("跳转平台失败:", error);
+                        this.showToast("错误", "平台跳转失败", "error");
+                        this.isLoading = false;
+                    }
+                },
+
+                // 显示提示框
+                showToast(title, message, type = "info") {
+                    const toast = document.getElementById("toast");
+                    const toastIcon = document.getElementById("toast-icon");
+                    const toastTitle = document.getElementById("toast-title");
+                    const toastMessage = document.getElementById("toast-message");
+
+                    toast.className = "toast";
+                    
+                    if (type === "success") {
+                        toast.classList.add("toast-success");
+                        toastIcon.className = "fa fa-check-circle";
+                        toastIcon.style.color = "var(--success)";
+                    } else if (type === "error") {
+                        toast.classList.add("toast-error");
+                        toastIcon.className = "fa fa-exclamation-circle";
+                        toastIcon.style.color = "var(--danger)";
+                    } else if (type === "warning") {
+                        toast.classList.add("toast-warning");
+                        toastIcon.className = "fa fa-exclamation-triangle";
+                        toastIcon.style.color = "var(--warning)";
+                    } else {
+                        toastIcon.className = "fa fa-info-circle";
+                        toastIcon.style.color = "var(--primary)";
+                    }
+
+                    toastTitle.textContent = title;
+                    toastMessage.textContent = message;
+
+                    toast.classList.add("show");
+
+                    const timeout = setTimeout(() => {
+                        toast.classList.remove("show");
+                    }, 3000);
+                    
+                    toast.onclick = () => {
+                        clearTimeout(timeout);
+                        toast.classList.remove("show");
+                    };
+                },
+
+                // 日期格式化
+                formatDate(dateString) {
+                    if (!dateString) return "";
+                    try {
+                        const date = new Date(dateString);
+                        return date.toLocaleString('zh-CN', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                        });
+                    } catch (error) {
+                        return dateString;
+                    }
+                }
             }
-          },
-          async register() {
-            const res = await fetch(`${this.base}/auth/register`, {
-              method: "POST",
-              credentials: "include",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                username: this.username,
-                password: this.password,
-                role: this.role,
-                cert_fingerprint: this.fingerprint || undefined,
-              }),
-            });
-            const data = await res.json();
-            if (!res.ok) { alert(JSON.stringify(data)); return; }
-            alert("注册成功");
-            this.loadCerts();
-          },
-          async login() {
-            const res = await fetch(`${this.base}/auth/login`, {
-              method: "POST",
-              credentials: "include",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ username: this.username, password: this.password }),
-            });
-            const data = await res.json();
-            if (!res.ok) { alert(JSON.stringify(data)); return; }
-            this.sessionToken = data.session_token;
-            const nextRaw = new URLSearchParams(window.location.search).get("next");
-            if (nextRaw) window.location.href = decodeURIComponent(nextRaw);
-          },
-          async loadCerts() {
-            const res = await fetch(`${this.base}/certs`);
-            const data = await res.json();
-            this.users = data;
-          },
-        },
-      }).mount("#app");
+        }).mount("#app");
     </script>
-  </body>
+</body>
 </html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>授权确认 - 统一身份认证</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    /* 复用 auth.html 的样式，保持风格统一 */
+    body { font-family: "Segoe UI", sans-serif; background:#f5f7fb; margin:0; color:#1f2937; display:flex; align-items:center; justify-content:center; height:100vh; }
+    .card { background:#fff; border-radius: 12px; box-shadow: 0 8px 18px rgba(0,0,0,0.08); padding: 24px 32px; width: 400px; text-align:center; }
+    h3 { margin-top:0; color:#111827; }
+    .scope-list { text-align:left; background:#f3f4f6; padding:12px; border-radius:8px; margin:16px 0; font-size:14px; color:#4b5563; }
+    .scope-item { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+    button { padding: 10px 16px; font-size: 14px; border-radius: 8px; border: none; cursor:pointer; width:100%; margin-top:10px; font-weight:600; }
+    .btn-allow { background:#10b981; color:#fff; }
+    .btn-deny { background:#e5e7eb; color:#374151; }
+    .client-name { font-weight:bold; color:#2563eb; }
+  </style>
+</head>
+<body>
+  <div id="app" class="card">
+    <h3>授权请求</h3>
+    <p>应用 <span class="client-name">{{ params.client_name }}</span> 申请获取您的以下权限：</p>
+    
+    <div class="scope-list">
+      <div v-for="scope in scopes" :key="scope" class="scope-item">
+        ✅ {{ scope }}
+      </div>
+    </div>
+
+    <p style="font-size:12px; color:#6b7280;">账号：{{ username }}</p>
+
+    <button class="btn-allow" @click="agree" :disabled="loading">同意并授权</button>
+    <button class="btn-deny" @click="deny">拒绝</button>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+    createApp({
+      data() {
+        return {
+          base: "https://auth.localhost:5000",
+          params: {},
+          username: "加载中...", // 实际应从 session 接口获取
+          loading: false
+        };
+      },
+      computed: {
+        scopes() {
+          // 把 JSON 字符串或逗号分隔的字符串转为数组
+          try {
+            return JSON.parse(this.params.scope || '[]');
+          } catch(e) {
+            return (this.params.scope || '').split(',');
+          }
+        }
+      },
+      mounted() {
+        // 1. 解析 URL 参数
+        const urlParams = new URLSearchParams(window.location.search);
+        this.params = Object.fromEntries(urlParams.entries());
+        this.checkSession();
+      },
+      methods: {
+        async checkSession() {
+          // 获取当前登录用户名用于展示
+          try {
+            const res = await fetch(`${this.base}/auth/session`, { credentials: "include" });
+            const data = await res.json();
+            if (res.ok) this.username = data.username;
+            else window.location.href = "auth.html"; // 没登录就踢回去
+          } catch(e) { console.error(e); }
+        },
+        async agree() {
+          this.loading = true;
+          try {
+            // 2. 发送 POST 请求确认授权
+            const res = await fetch(`${this.base}/auth/approve`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({
+                client_id: this.params.client_id,
+                redirect_uri: this.params.redirect_uri,
+                state: this.params.state,
+                allow: true
+              })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "授权失败");
+            
+            // 3. 拿到后端返回的跳转地址（包含 code），跳转回去
+            window.location.href = data.redirect;
+          } catch (e) {
+            alert(e.message);
+            this.loading = false;
+          }
+        },
+        deny() {
+          alert("您取消了授权");
+          // 实际场景可以跳回一个错误页
+          window.location.href = "about:blank"; 
+        }
+      }
+    }).mount("#app");
+  </script>
+</body>
+</html>

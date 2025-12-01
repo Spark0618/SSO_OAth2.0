@@ -66,10 +66,37 @@ def _create_user(username: str, password: str, role: str):
         raise ValueError("invalid role")
     pwd_hash = generate_password_hash(password)
     with get_db_session() as db:
-        db.execute(
+        result = db.execute(
             text("INSERT INTO users (username, password_hash, role) VALUES (:u, :p, :r)"),
             {"u": username, "p": pwd_hash, "r": role},
         )
+        db.commit()
+        return result.lastrowid
+
+
+def _ensure_profile_for_role(user_id: int, username: str, role: str):
+    """Create placeholder student/teacher profile so后续接口可用。"""
+    with get_db_session() as db:
+        if role == "student":
+            db.execute(
+                text(
+                    """
+                    INSERT IGNORE INTO students (user_id, name, student_no, gender, hometown, grade, college, major)
+                    VALUES (:uid, :name, :stu_no, '', '', '', '', '')
+                    """
+                ),
+                {"uid": user_id, "name": username, "stu_no": username},
+            )
+        else:
+            db.execute(
+                text(
+                    """
+                    INSERT IGNORE INTO teachers (user_id, name, employee_no, title, department)
+                    VALUES (:uid, :name, :emp_no, '', '')
+                    """
+                ),
+                {"uid": user_id, "name": username, "emp_no": username},
+            )
         db.commit()
 
 
@@ -132,7 +159,8 @@ def register():
     if not username or not password:
         return jsonify({"error": "username and password required"}), 400
     try:
-        _create_user(username, password, role)
+        user_id = _create_user(username, password, role)
+        _ensure_profile_for_role(user_id, username, role)
     except ValueError:
         return jsonify({"error": "invalid role, must be student or teacher"}), 400
     except IntegrityError:

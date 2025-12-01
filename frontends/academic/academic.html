@@ -592,8 +592,14 @@
           },
           tableColumns() {
             if (this.lastFetch === "courses") return ["课程号", "课程名称"];
-            if (this.lastFetch === "grades") return ["课程号", "成绩"];
+            if (this.lastFetch === "grades") return ["课程号", "课程名称", "成绩"];
             return [];
+          },
+          courseTitleMap() {
+            return this.courses.reduce((acc, c) => {
+              acc[c.code] = c.title || c.name || "";
+              return acc;
+            }, {});
           },
           tableRows() {
             if (this.lastFetch === "courses") {
@@ -605,6 +611,7 @@
             if (this.lastFetch === "grades") {
               return Object.entries(this.grades).map(([code, grade]) => ({
                 课程号: code,
+                课程名称: this.courseTitleMap[code] || "-",
                 成绩: grade,
               }));
             }

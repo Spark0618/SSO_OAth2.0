@@ -166,6 +166,29 @@ def _ensure_teacher_profile(session, user_row, username: str):
     ).mappings().first()["id"]
 
 
+def _ensure_student_profile(session, user_row, username: str):
+    student_row = session.execute(
+        text("SELECT id FROM students WHERE user_id=:uid"),
+        {"uid": user_row["id"]},
+    ).mappings().first()
+    if student_row:
+        return student_row["id"]
+    session.execute(
+        text(
+            """
+            INSERT INTO students (user_id, name, student_no, gender, hometown, grade, college, major)
+            VALUES (:uid, :name, :stu_no, '', '', '', '', '')
+            """
+        ),
+        {"uid": user_row["id"], "name": username, "stu_no": username},
+    )
+    session.commit()
+    return session.execute(
+        text("SELECT id FROM students WHERE user_id=:uid"),
+        {"uid": user_row["id"]},
+    ).mappings().first()["id"]
+
+
 def _teacher_courses(session, user_id):
     rows = session.execute(
         text(
@@ -449,9 +472,10 @@ def profile():
             if not user_row:
                 return jsonify({"error": "user not found in DB"}), 404
             if user_row["role"] == "student":
+                _ensure_student_profile(session, user_row, username)
                 prof = _student_profile(session, user_row["id"])
                 if not prof:
-                    return jsonify({"error": "student profile not found"}), 404
+                    prof = {}
                 payload = {
                     "personal": {
                         "name": prof["name"],
@@ -465,9 +489,10 @@ def profile():
                     },
                 }
             else:
+                _ensure_teacher_profile(session, user_row, username)
                 prof = _teacher_profile(session, user_row["id"])
                 if not prof:
-                    return jsonify({"error": "teacher profile not found"}), 404
+                    prof = {}
                 payload = {
                     "personal": {
                         "name": prof["name"],
@@ -499,6 +524,7 @@ def update_profile():
             if not user_row:
                 return jsonify({"error": "user not found in DB"}), 404
             if user_row["role"] == "student":
+                _ensure_student_profile(session, user_row, username)
                 session.execute(
                     text(
                         """
@@ -519,6 +545,7 @@ def update_profile():
                     },
                 )
             else:
+                _ensure_teacher_profile(session, user_row, username)
                 session.execute(
                     text(
                         """

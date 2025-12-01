@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>SSO OAuth2.0 架构图</title>
+  <style>
+    body { margin:0; background:#0b1220; color:#e2e8f0; font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+    svg { width:100vw; height:100vh; display:block; }
+    .label { font-size:12px; fill:#e2e8f0; font-weight:600; }
+    .title { font-size:16px; fill:#f8fafc; font-weight:700; }
+    .sub { font-size:11px; fill:#cbd5e1; }
+    .bubble { filter:url(#shadow); }
+    .arrow { stroke:#94a3b8; stroke-width:2; marker-end:url(#arrowHead); fill:none; }
+    .arrow-strong { stroke:#22d3ee; stroke-width:2.5; marker-end:url(#arrowHeadStrong); fill:none; }
+    .arrow-warm { stroke:#f59e0b; stroke-width:2; marker-end:url(#arrowHeadWarm); fill:none; }
+    .db-label { font-size:12px; fill:#f8fafc; font-weight:700; }
+    .tooltip { pointer-events:none; opacity:0; transition:opacity 0.2s ease; }
+    .hoverable:hover + .tooltip { opacity:1; }
+  </style>
+</head>
+<body>
+<svg viewBox="0 0 1400 900" role="img" aria-label="SSO OAuth2.0 架构图" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <linearGradient id="gradAuth" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee"/><stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="gradAcademic" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a78bfa"/><stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="gradCloud" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/><stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <linearGradient id="gradDB" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#facc15"/><stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0b1220" flood-opacity="0.35"/>
+    </filter>
+    <marker id="arrowHead" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" fill="#94a3b8">
+      <path d="M0,0 L10,5 L0,10 Z"/>
+    </marker>
+    <marker id="arrowHeadStrong" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" fill="#22d3ee">
+      <path d="M0,0 L10,5 L0,10 Z"/>
+    </marker>
+    <marker id="arrowHeadWarm" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" fill="#f59e0b">
+      <path d="M0,0 L10,5 L0,10 Z"/>
+    </marker>
+  </defs>
+
+  <!-- 标题 -->
+  <text x="40" y="60" fill="#e2e8f0" font-size="28" font-weight="800">SSO OAuth2.0 + 自建CA 架构图</text>
+  <text x="40" y="90" fill="#94a3b8" font-size="14">三个站点共用统一认证，授权码 + HttpOnly 会话 + TLS/mTLS + JWT 验证</text>
+
+  <!-- Auth Server -->
+  <a xlink:href="https://auth.localhost:4173/auth.html" target="_blank">
+  <g transform="translate(520,150)" style="cursor:pointer;">
+    <rect class="bubble hoverable" x="0" y="0" rx="18" ry="18" width="360" height="180" fill="url(#gradAuth)"/>
+    <text class="title" x="20" y="32">统一认证 / 授权服务器</text>
+    <text class="label" x="20" y="60">后端：Flask + SQLAlchemy，JWT HS256</text>
+    <text class="label" x="20" y="80">接口：/auth/authorize, /auth/token, /auth/validate</text>
+    <text class="label" x="20" y="100">会话：HttpOnly sso_session（SameSite=None）</text>
+    <text class="label" x="20" y="120">安全：TLS，mTLS 指纹绑定可选，CORS</text>
+    <text class="label" x="20" y="140">客户端：academic-app, cloud-app</text>
+    <rect class="tooltip" x="0" y="0" rx="18" ry="18" width="360" height="180" fill="#0b1220" opacity="0.8"/>
+    <text class="sub tooltip" x="20" y="40">认证中心：颁发授权码/令牌，校验 JWT，可强制证书指纹</text>
+  </g>
+  </a>
+
+  <!-- Academic Site -->
+  <a xlink:href="https://academic.localhost:4174/academic.html" target="_blank">
+  <g transform="translate(120,380)" style="cursor:pointer;">
+    <rect class="bubble hoverable" x="0" y="0" rx="18" ry="18" width="420" height="240" fill="url(#gradAcademic)"/>
+    <text class="title" x="20" y="32">教务站点</text>
+    <text class="label" x="20" y="60">前端：Vue (CDN)，课表/成绩、导出 JSON/CSV、教师管理</text>
+    <text class="label" x="20" y="80">后端：Flask + SQLAlchemy；会话 Cookie academic_session</text>
+    <text class="label" x="20" y="100">接口：/session/login|callback|status，/courses，/grades，/profile</text>
+    <text class="label" x="20" y="120">教师：/courses/manage, /courses/&lt;code&gt;/students|grade|schedule, /students</text>
+    <text class="label" x="20" y="140">安全：TLS，后端携带 Bearer 到 /auth/validate，刷新令牌</text>
+    <text class="label" x="20" y="160">前后端：Fetch credentials include，HttpOnly Cookie，CORS</text>
+    <rect class="tooltip" x="0" y="0" rx="18" ry="18" width="420" height="240" fill="#0b1220" opacity="0.8"/>
+    <text class="sub tooltip" x="20" y="40">教务站点：授权码换令牌，后端持有 access/refresh，前端仅持会话</text>
+  </g>
+  </a>
+
+  <!-- Cloud Site -->
+  <a xlink:href="https://cloud.localhost:4176/cloud.html" target="_blank">
+  <g transform="translate(860,380)" style="cursor:pointer;">
+    <rect class="bubble hoverable" x="0" y="0" rx="18" ry="18" width="420" height="220" fill="url(#gradCloud)"/>
+    <text class="title" x="20" y="32">云盘站点</text>
+    <text class="label" x="20" y="60">前端：Vue (CDN)，文件列表、模拟上传</text>
+    <text class="label" x="20" y="80">后端：Flask，内存文件列表，Cookie cloud_session</text>
+    <text class="label" x="20" y="100">接口：/session/login|callback|status，/files(GET|POST)</text>
+    <text class="label" x="20" y="120">安全：TLS，后端携带 Bearer 到 /auth/validate，刷新令牌</text>
+    <text class="label" x="20" y="140">前后端：Fetch credentials include，HttpOnly Cookie</text>
+    <rect class="tooltip" x="0" y="0" rx="18" ry="18" width="420" height="220" fill="#0b1220" opacity="0.8"/>
+    <text class="sub tooltip" x="20" y="40">云盘站点：与教务同模式，后端代持令牌，前端不暴露 token</text>
+  </g>
+  </a>
+
+  <!-- Database -->
+  <g transform="translate(560,640)">
+    <ellipse cx="150" cy="30" rx="150" ry="30" fill="url(#gradDB)" class="bubble hoverable"/>
+    <rect x="0" y="30" width="300" height="120" rx="0" ry="0" fill="url(#gradDB)" class="bubble hoverable"/>
+    <ellipse cx="150" cy="150" rx="150" ry="30" fill="#d97706" class="bubble hoverable"/>
+    <text class="title" x="28" y="62">学术库 MySQL</text>
+    <text class="db-label" x="28" y="88">users: 账号/哈希/角色</text>
+    <text class="db-label" x="28" y="106">students, teachers: 档案</text>
+    <text class="db-label" x="28" y="124">courses: 课表 day/slot/location</text>
+    <text class="db-label" x="28" y="142">enrollments: 选课+成绩</text>
+    <rect class="tooltip" x="-5" y="0" width="310" height="180" rx="12" ry="12" fill="#0b1220" opacity="0.8"/>
+    <text class="sub tooltip" x="20" y="80">学术数据：用户、课程、课表、成绩；教务后端通过 SQLAlchemy 访问</text>
+  </g>
+
+  <!-- 前端静态服务器提示 -->
+  <g transform="translate(50,780)">
+    <rect class="bubble hoverable" x="0" y="0" rx="12" ry="12" width="260" height="60" fill="#38bdf8"/>
+    <text class="label" x="14" y="30">前端静态 HTTPS (python https_server.py)</text>
+    <text class="sub" x="14" y="48" fill="#e2e8f0">证书来自 certs/*.crt，三站分别 4173/4174/4176</text>
+    <rect class="tooltip" x="0" y="0" rx="12" ry="12" width="260" height="60" fill="#0b1220" opacity="0.8"/>
+    <text class="sub tooltip" x="14" y="36">本地静态服务器：为三前端提供 HTTPS，浏览器信任自建 CA</text>
+  </g>
+
+  <!-- 流程文字 -->
+  <g transform="translate(1040,120)">
+    <rect class="bubble hoverable" x="0" y="0" rx="12" ry="12" width="300" height="170" fill="#1f2937"/>
+    <text class="label" x="14" y="30" fill="#e2e8f0">认证流程 (授权码 + 后端代持令牌)</text>
+    <text class="sub" x="14" y="52" fill="#cbd5e1">1) 前端点击登录 -> /session/login 302 到认证门户</text>
+    <text class="sub" x="14" y="70" fill="#cbd5e1">2) /auth/authorize 校验 SSO Cookie，发 code</text>
+    <text class="sub" x="14" y="88" fill="#cbd5e1">3) 业务后端 /auth/token 换取 access/refresh</text>
+    <text class="sub" x="14" y="106" fill="#cbd5e1">4) 受保护接口携带 Bearer -> /auth/validate</text>
+    <text class="sub" x="14" y="124" fill="#cbd5e1">5) 令牌过期用 refresh_token 续期</text>
+    <text class="sub" x="14" y="142" fill="#fca5a5">mTLS 可选：指纹绑定校验</text>
+    <rect class="tooltip" x="0" y="0" rx="12" ry="12" width="300" height="170" fill="#0b1220" opacity="0.8"/>
+    <text class="sub tooltip" x="14" y="32">完整授权码 + HttpOnly 会话 + JWT 验证，支持刷新与 mTLS</text>
+  </g>
+
+  <!-- 关系与数据流箭头 -->
+  <!-- Academic <-> Auth -->
+  <path class="arrow-strong" d="M330 380 C 380 250, 520 230, 520 230" />
+  <text x="370" y="200" fill="#22d3ee" font-size="12">授权码 / 令牌交换 (TLS)</text>
+
+  <!-- Cloud <-> Auth -->
+  <path class="arrow-strong" d="M1070 380 C 1020 250, 880 230, 880 230" />
+  <text x="900" y="200" fill="#22d3ee" font-size="12">授权码 / 令牌交换 (TLS)</text>
+
+  <!-- Academic backend -> DB -->
+  <path class="arrow-warm" d="M330 620 C 420 660, 500 700, 560 700" />
+  <text x="420" y="645" fill="#f59e0b" font-size="12">SQLAlchemy / MySQL (TLS 可配置)</text>
+
+  <!-- Academic frontend -> Academic backend -->
+  <path class="arrow" d="M-40 500 L120 500" />
+  <text x="-70" y="485" fill="#94a3b8" font-size="12">前端调用 (HTTPS + HttpOnly)</text>
+
+  <!-- Cloud frontend -> Cloud backend -->
+  <path class="arrow" d="M1400 470 L1280 470" />
+  <text x="1310" y="455" fill="#94a3b8" font-size="12">前端调用 (HTTPS + HttpOnly)</text>
+
+  <!-- Auth front portal relation -->
+  <g transform="translate(520,80)">
+    <rect class="bubble hoverable" x="0" y="0" rx="10" ry="10" width="220" height="50" fill="#38bdf8"/>
+    <text class="label" x="12" y="30">认证门户前端 (auth.html)</text>
+    <rect class="tooltip" x="0" y="0" rx="10" ry="10" width="220" height="50" fill="#0b1220" opacity="0.8"/>
+    <text class="sub tooltip" x="12" y="30">展示登录/注册，承接授权码跳转，写入 SSO Cookie</text>
+  </g>
+  <path class="arrow" d="M630 130 L630 150" />
+
+  <!-- Security badges -->
+  <g transform="translate(40,120)">
+    <rect x="0" y="0" width="230" height="120" rx="12" ry="12" fill="#0f172a" stroke="#22d3ee" stroke-width="2" class="bubble hoverable"/>
+    <text class="label" x="12" y="26" fill="#e2e8f0">安全技术</text>
+    <text class="sub" x="12" y="48" fill="#22d3ee">TLS / 可选 mTLS (证书指纹绑定)</text>
+    <text class="sub" x="12" y="66" fill="#cbd5e1">JWT HS256 访问令牌</text>
+    <text class="sub" x="12" y="84" fill="#cbd5e1">HttpOnly + SameSite=None Cookie</text>
+    <text class="sub" x="12" y="102" fill="#cbd5e1">CORS + Bearer 透传校验</text>
+    <rect class="tooltip" x="0" y="0" width="230" height="120" rx="12" ry="12" fill="#0b1220" opacity="0.8"/>
+    <text class="sub tooltip" x="12" y="34">端到端安全：TLS/mTLS + JWT + HttpOnly Cookie</text>
+  </g>
+</svg>
+</body>
+</html>

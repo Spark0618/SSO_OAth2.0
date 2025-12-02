@@ -373,6 +373,7 @@ def ca_issue():
 @app.route("/certs", methods=["GET"])
 def certs():
     """List users with stored certificate fingerprints for admin UI."""
+    USERS = {}
     return jsonify({u: {"cert_fingerprint": d.get("cert_fingerprint")} for u, d in USERS.items()})
 
 

@@ -7,8 +7,7 @@ import requests
 from flask import Flask, jsonify, request, send_file
 from werkzeug.utils import secure_filename
 
-#AUTH_SERVER = os.environ.get("AUTH_SERVER", "https://auth.localhost:5000")
-AUTH_SERVER = os.environ.get("AUTH_SERVER", "http://127.0.0.1:5000")
+AUTH_SERVER = os.environ.get("AUTH_SERVER", "https://auth.localhost:5000")
 CLIENT_ID = "cloud-app"
 CLIENT_SECRET = "cloud-secret"
 CA_CERT_PATH = os.environ.get("CA_CERT_PATH", "certs/ca.crt")

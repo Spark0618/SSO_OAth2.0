@@ -97,9 +97,10 @@
           }
         },
         deny() {
-          alert("您取消了授权");
-          // 实际场景可以跳回一个错误页
-          window.location.href = "about:blank"; 
+          // 这里的修改实现了你的需求：
+          // 不再跳转到空白页，而是返回认证中心首页 (auth.html)
+          // 由于用户拒绝了授权，流程终止，用户留在认证中心查看个人信息是合理的
+          window.location.href = "auth.html"; 
         }
       }
     }).mount("#app");

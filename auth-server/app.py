@@ -38,6 +38,7 @@ REFRESH_EXPIRES_SECONDS = 3600
 
 ERROR_PAGE = "https://auth.localhost:4173/error.html"
 LOGIN_PORTAL = "https://auth.localhost:4173/auth.html"
+FRONT_URL = LOGIN_PORTAL  # 出错时跳回登录页
 CONSENT_PORTAL = "https://auth.localhost:4173/consent.html"
 
 # ================= 数据模型 =================
@@ -227,7 +228,7 @@ def login():
     }
     
     resp = jsonify({"session_token": session_token, "username": username, "role": user.role})
-    resp.set_cookie("sso_session", session_token, httponly=True, secure=True, samesite="None", max_age=3600)
+    resp.set_cookie("sso_session", session_token, httponly=True, secure=True, samesite="None", max_age=3600, domain=request.host.split(':')[0])
     return resp
 
 # 登出
@@ -430,12 +431,12 @@ def authorize():
     db.close()
     
     if not client: 
-        return redirect(f"{FRONT_URL}?error={quote('非法的应用ID (invalid client)')}")
+        return redirect(f"{FRONT_URL}?error={quote_plus('非法的应用ID (invalid client)')}")
     
     # 4. 检查回调地址
     valid_uris = client.get_redirect_uris()
     if redirect_uri not in valid_uris:
-        return redirect(f"{FRONT_URL}?error={quote('非法的回调地址 (invalid redirect_uri)')}")
+        return redirect(f"{FRONT_URL}?error={quote_plus('非法的回调地址 (invalid redirect_uri)')}")
 
     # === 改动重点在这里 ===
     # 5. 不再直接发 Code，而是跳转到确认页面

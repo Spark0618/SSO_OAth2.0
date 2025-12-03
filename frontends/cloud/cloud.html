@@ -755,8 +755,8 @@
             }).catch(() => {});
             
             try {
-              await fetch(`${this.authBase}/auth/session`, { 
-                method: "DELETE", 
+              await fetch(`${this.authBase}/auth/logout`, { 
+                method: "POST", 
                 credentials: "include" 
               });
             } catch (_) {

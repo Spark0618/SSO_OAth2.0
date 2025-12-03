@@ -3,6 +3,7 @@
 *.srl
 *.csr
 *.ext
+*.p12
 *.ingest
 .python-version
 __pycache__/
@@ -11,5 +12,3 @@ venv/
 uploads/
 logs/
 merge_*.py
-merge*
-*.ingest

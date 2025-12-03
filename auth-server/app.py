@@ -226,7 +226,7 @@ def login():
         "fingerprint": request_fp
     }
     
-    resp = jsonify({"session_token": session_token, "username": username})
+    resp = jsonify({"session_token": session_token, "username": username, "role": user.role})
     resp.set_cookie("sso_session", session_token, httponly=True, secure=True, samesite="None", max_age=3600)
     return resp
 
@@ -531,21 +531,42 @@ def token():
 
 # 生成一个票据(access_token) ，并生成更新这个票据的票据(refresh_token)
 def _issue_tokens(username, client_id, fingerprint=None, scopes=None):
+    # 保证令牌内包含角色，便于下游展示权限
+    db = get_db()
+    user = db.query(User).filter_by(username=username).first()
+    role = user.role if user else None
+    db.close()
+
     now = datetime.now(timezone.utc)
     exp_ts = int((now + timedelta(seconds=ACCESS_EXPIRES_SECONDS)).timestamp())
-    payload = {"sub": username, "client_id": client_id, "iat": int(now.timestamp()), "exp": exp_ts, "scope": scopes or []}
-    if fingerprint: payload["fp"] = fingerprint
+    payload = {
+        "sub": username,
+        "client_id": client_id,
+        "iat": int(now.timestamp()),
+        "exp": exp_ts,
+        "scope": scopes or [],
+    }
+    if fingerprint:
+        payload["fp"] = fingerprint
+    if role:
+        payload["role"] = role
     
     access_token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
     refresh_token = str(uuid.uuid4())
     REFRESH_TOKENS[refresh_token] = {
-        "username": username, "client_id": client_id,
-        "exp": time.time() + REFRESH_EXPIRES_SECONDS, "fingerprint": fingerprint,
-        "scope": scopes or []
+        "username": username,
+        "client_id": client_id,
+        "exp": time.time() + REFRESH_EXPIRES_SECONDS,
+        "fingerprint": fingerprint,
+        "scope": scopes or [],
+        "role": role,
     }
     return jsonify({
-        "access_token": access_token, "refresh_token": refresh_token,
-        "expires_in": ACCESS_EXPIRES_SECONDS, "username": username,
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "expires_in": ACCESS_EXPIRES_SECONDS,
+        "username": username,
+        "role": role,
         "scope": scopes or []
     })
 
@@ -573,14 +594,20 @@ def validate():
         if cert and cert.status == 'revoked':
             return jsonify({"error": "Certificate REVOKED"}), 401
 
-    return jsonify({"active": True, "username": payload["sub"], "client_id": payload["client_id"], "scope": payload.get("scope", [])})
+    return jsonify({
+        "active": True,
+        "username": payload["sub"],
+        "client_id": payload["client_id"],
+        "scope": payload.get("scope", []),
+        "role": payload.get("role")
+    })
 
 @app.route("/auth/session", methods=["GET"])
 def session_status():
     session_token = request.cookies.get("sso_session")
     session = SESSIONS.get(session_token)
     if not session: return jsonify({"active": False}), 401
-    return jsonify({"active": True, "username": session["username"]})
+    return jsonify({"active": True, "username": session["username"], "role": session.get("role")})
 
 # 相当于ping，确认此服务器是否正在工作
 @app.route("/health", methods=["GET"])

@@ -1,0 +1,53 @@
+erDiagram
+    users {
+        int id PK
+        string username UNIQUE
+        string password_hash
+        string role
+        datetime created_at
+    }
+
+    students {
+        int id PK
+        int user_id UNIQUE FK
+        string name
+        string student_no UNIQUE
+        string gender
+        string hometown
+        string grade
+        string college
+        string major
+    }
+
+    teachers {
+        int id PK
+        int user_id UNIQUE FK
+        string name
+        string employee_no UNIQUE
+        string title
+        string department
+    }
+
+    courses {
+        int id PK
+        string code UNIQUE
+        string title
+        int teacher_id FK
+        string description
+        int day
+        int slot
+        string location
+    }
+
+    enrollments {
+        int id PK
+        int course_id FK
+        int student_id FK
+        string grade
+    }
+
+    users ||--|| students : 1-1_via_user_id
+    users ||--|| teachers : 1-1_via_user_id
+    teachers ||--o{ courses : 1-n_via_teacher_id
+    courses ||--o{ enrollments : 1-n_via_course_id
+    students ||--o{ enrollments : 1-n_via_student_id

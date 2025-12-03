@@ -461,7 +461,7 @@ def grades():
                 grade_map = {row["code"]: row.get("grade") or "" for row in rows}
             else:
                 rows = _teacher_courses(session, user_row["id"])
-                grade_map = {row["code"]: "教师端请前往管理页面"} if rows else {}
+                grade_map = {row["code"]: "教师端请前往管理页面" for row in rows} if rows else {}
             return jsonify({"user": username, "grades": grade_map})
     except SQLAlchemyError as exc:
         return jsonify({"error": f"db error: {exc}"}), 500

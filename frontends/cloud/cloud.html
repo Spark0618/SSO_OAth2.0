@@ -5,104 +5,636 @@
     <title>云盘站点 - SSO 演示</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
-      body { font-family: "Segoe UI", sans-serif; margin:0; background:#0f172a; color:#e2e8f0; }
-      header { padding: 16px 24px; background:#0b1220; }
-      main { padding: 24px; max-width: 960px; margin:auto; }
+      :root {
+        --primary-color: #6A8CAF;
+        --primary-light: #8CADD6;
+        --secondary-color: #A8D5BA;
+        --accent-color: #F4A261;
+        --background-color: #F8F9FA;
+        --card-bg: #FFFFFF;
+        --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        --text-primary: #2C3E50;
+        --text-secondary: #7F8C8D;
+        --border-color: #E0E6ED;
+        --success-color: #2ECC71;
+        --warning-color: #F39C12;
+        --hover-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+        --transition-speed: 0.3s;
+      }
+
+      body {
+        font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        margin: 0;
+        background: var(--background-color);
+        color: var(--text-primary);
+        line-height: 1.6;
+        min-height: 100vh;
+      }
+
+      header {
+        padding: 20px 32px;
+        background: var(--card-bg);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      header h2 {
+        margin: 0;
+        color: var(--primary-color);
+        font-weight: 600;
+        font-size: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      header h2::before {
+        content: "☁️";
+        font-size: 1.8rem;
+      }
+
+      main {
+        padding: 32px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .cards-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+      }
+
       .card {
-        background: #111827;
-        border: 1px solid #1e293b;
+        background: var(--card-bg);
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: var(--card-shadow);
+        border: 1px solid var(--border-color);
+        transition: all var(--transition-speed) ease;
+      }
+
+      .card:hover {
+        box-shadow: var(--hover-shadow);
+        transform: translateY(-2px);
+      }
+
+      .card h3 {
+        margin: 0 0 20px 0;
+        color: var(--primary-color);
+        font-size: 1.3rem;
+        font-weight: 600;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--secondary-color);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .card h3::before {
+        content: "";
+        width: 6px;
+        height: 24px;
+        background: var(--primary-color);
+        border-radius: 3px;
+      }
+
+      .status-container {
+        background: linear-gradient(135deg, rgba(106, 140, 175, 0.1), rgba(168, 213, 186, 0.1));
         border-radius: 12px;
-        padding: 16px 20px;
+        padding: 20px;
+        margin-bottom: 24px;
+        border: 1px solid rgba(106, 140, 175, 0.2);
+      }
+
+      .status-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .status-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .status-label {
+        font-weight: 500;
+        color: var(--text-secondary);
+        min-width: 100px;
+      }
+
+      .status-value {
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .status-value.logged-in {
+        color: var(--success-color);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .status-value.logged-in::before {
+        content: "✓";
+        background: var(--success-color);
+        color: white;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+      }
+
+      .status-value.logged-out {
+        color: var(--warning-color);
+      }
+
+      .button-group {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+      }
+
+      button {
+        padding: 12px 24px;
+        font-size: 15px;
+        font-weight: 600;
+        border-radius: 10px;
+        border: none;
+        cursor: pointer;
+        transition: all var(--transition-speed) ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-width: 140px;
+      }
+
+      button.primary {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+        color: white;
+        box-shadow: 0 4px 12px rgba(106, 140, 175, 0.3);
+      }
+
+      button.primary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(106, 140, 175, 0.4);
+      }
+
+      button.secondary {
+        background: linear-gradient(135deg, var(--secondary-color), #C5E8D4);
+        color: var(--text-primary);
+        box-shadow: 0 4px 12px rgba(168, 213, 186, 0.3);
+      }
+
+      button.secondary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(168, 213, 186, 0.4);
+      }
+
+      button.accent {
+        background: linear-gradient(135deg, var(--accent-color), #F7C291);
+        color: white;
+        box-shadow: 0 4px 12px rgba(244, 162, 97, 0.3);
+      }
+
+      button.accent:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(244, 162, 97, 0.4);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none !important;
+        box-shadow: none !important;
+      }
+
+      .operations-panel {
+        background: linear-gradient(135deg, rgba(248, 249, 250, 0.8), rgba(255, 255, 255, 0.9));
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+        border: 1px solid var(--border-color);
+      }
+
+      .operations-grid {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+      }
+
+      .file-upload-area {
+        background: rgba(168, 213, 186, 0.1);
+        border: 2px dashed var(--secondary-color);
+        border-radius: 12px;
+        padding: 24px;
+        transition: all var(--transition-speed) ease;
+        text-align: center;
+      }
+
+      .file-upload-area:hover {
+        background: rgba(168, 213, 186, 0.15);
+        border-color: var(--primary-color);
+      }
+
+      .file-input-wrapper {
+        position: relative;
         margin-bottom: 16px;
-        box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+        display: inline-block;
       }
-      input, button {
-        padding: 8px 10px;
+
+      .file-input-wrapper input[type="file"] {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+      }
+
+      .file-input-label {
+        display: inline-block;
+        padding: 16px 32px;
+        background: var(--card-bg);
+        border-radius: 10px;
+        border: 2px solid var(--primary-color);
+        color: var(--primary-color);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all var(--transition-speed) ease;
+        min-width: 200px;
+        text-align: center;
+      }
+
+      .file-input-label:hover {
+        background: rgba(106, 140, 175, 0.1);
+      }
+
+      .selected-file {
+        margin: 16px 0;
+        color: var(--text-secondary);
         font-size: 14px;
-        border-radius: 8px;
-        border: 1px solid #1e293b;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        word-break: break-word;
+        text-align: center;
+        min-height: 24px;
       }
-      input { background:#0b1220; color:#e2e8f0; }
-      button { background:#10b981; color:#0b1220; border:none; cursor:pointer; }
-      button.secondary { background:#22d3ee; }
-      button:disabled { opacity:0.6; cursor: not-allowed; }
-      ul { list-style:none; padding:0; margin-top:12px; }
-      li { padding:8px 0; border-bottom:1px dashed #1e293b; }
-      .meta-line { font-size:12px; color:#94a3b8; margin-top:2px; }
-      .ops-line { margin-top:4px; }
-      .tag-encrypted { color:#f97316; font-size:12px; margin-left:6px; }
-      .tag-binary { color:#38bdf8; font-size:11px; margin-left:6px; }
+
+      .selected-file::before {
+        content: "📄";
+      }
+
+      .upload-button-wrapper {
+        display: flex;
+        justify-content: center;
+        margin-top: 8px;
+      }
+
+      .upload-button-wrapper button {
+        min-width: 200px;
+      }
+
+      .file-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .file-item {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 16px;
+        border: 1px solid var(--border-color);
+        transition: all var(--transition-speed) ease;
+        position: relative;
+      }
+
+      .file-item:hover {
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+        transform: translateY(-2px);
+      }
+
+      .file-item::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 4px;
+        height: 60%;
+        background: var(--primary-color);
+        border-radius: 2px;
+        opacity: 0;
+        transition: opacity var(--transition-speed) ease;
+      }
+
+      .file-item:hover::before {
+        opacity: 1;
+      }
+
+      .file-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+      }
+
+      .file-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .file-name::before {
+        content: "📎";
+        font-size: 18px;
+      }
+
+      .file-tags {
+        display: flex;
+        gap: 8px;
+      }
+
+      .tag {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .tag.encrypted {
+        background: rgba(244, 162, 97, 0.15);
+        color: var(--accent-color);
+        border: 1px solid rgba(244, 162, 97, 0.3);
+      }
+
+      .tag.binary {
+        background: rgba(106, 140, 175, 0.15);
+        color: var(--primary-color);
+        border: 1px solid rgba(106, 140, 175, 0.3);
+      }
+
+      .file-meta {
+        display: flex;
+        gap: 20px;
+        color: var(--text-secondary);
+        font-size: 14px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+      }
+
+      .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .meta-item::before {
+        font-size: 14px;
+      }
+
+      .file-size::before {
+        content: "📏";
+      }
+
+      .upload-time::before {
+        content: "🕒";
+      }
+
+      .share-info {
+        background: rgba(168, 213, 186, 0.1);
+        border-radius: 8px;
+        padding: 12px;
+        margin: 12px 0;
+        border-left: 3px solid var(--secondary-color);
+      }
+
+      .share-url {
+        font-size: 13px;
+        color: var(--primary-color);
+        word-break: break-all;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .share-url::before {
+        content: "🔗";
+      }
+
+      .share-expiry {
+        font-size: 12px;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .share-expiry::before {
+        content: "⏰";
+      }
+
+      .file-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--text-secondary);
+      }
+
+      .empty-state::before {
+        content: "📁";
+        font-size: 48px;
+        display: block;
+        margin-bottom: 16px;
+        opacity: 0.5;
+      }
+
+      .loading {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 2px solid rgba(106, 140, 175, 0.3);
+        border-radius: 50%;
+        border-top-color: var(--primary-color);
+        animation: spin 1s ease-in-out infinite;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      @media (max-width: 768px) {
+        main {
+          padding: 20px;
+        }
+        
+        .cards-container {
+          grid-template-columns: 1fr;
+        }
+        
+        .operations-grid {
+          flex-direction: column;
+          align-items: center;
+        }
+        
+        .operations-grid button {
+          width: 100%;
+          max-width: 300px;
+        }
+        
+        .button-group {
+          flex-direction: column;
+        }
+        
+        button {
+          width: 100%;
+        }
+        
+        .file-input-label,
+        .upload-button-wrapper button {
+          min-width: 100%;
+          max-width: 300px;
+        }
+      }
     </style>
   </head>
   <body>
     <header>
-      <h2>云盘站点 · OAuth2.0 SSO</h2>
+      <h2>云盘站点 · OAuth2.0 SSO 演示</h2>
     </header>
     <main id="app">
-      <!-- 登录卡片 -->
-      <div class="card">
-        <h3>登录 & 授权</h3>
-        <p>当前状态：{{ loggedIn ? "已登录" : "未登录" }}</p>
-        <p v-if="username">当前用户：{{ username }}</p>
-        <button class="secondary" @click="goLogin">前往统一认证（302）</button>
-        <button @click="logout">退出</button>
-      </div>
-
-      <!-- 云盘卡片 -->
-      <div class="card">
-        <h3>云盘文件（模拟 + 实际上传）</h3>
-
-        <!-- 操作区 -->
-        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button @click="listFiles" :disabled="!loggedIn || loading">列出文件</button>
-            <button @click="uploadDemo" :disabled="!loggedIn || loading">模拟上传元数据</button>
+      <div class="cards-container">
+        <!-- 登录卡片 -->
+        <div class="card">
+          <h3>登录 & 授权</h3>
+          <div class="status-container">
+            <div class="status-row">
+              <span class="status-label">当前状态：</span>
+              <span class="status-value" :class="loggedIn ? 'logged-in' : 'logged-out'">
+                {{ loggedIn ? "已登录" : "未登录" }}
+              </span>
+            </div>
+            <div class="status-row" v-if="username">
+              <span class="status-label">当前用户：</span>
+              <span class="status-value">{{ username }}</span>
+            </div>
           </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-            <input type="file" @change="onFileChange" />
-            <span style="font-size:12px; color:#94a3b8;">
-              {{ realFileName || "未选择文件" }}
-            </span>
-            <button @click="uploadReal" :disabled="!loggedIn || loading || !realFile">
-              上传真实文件
+          <div class="button-group">
+            <button class="primary" @click="goLogin">
+              <span>前往统一认证</span>
+              <span>→</span>
+            </button>
+            <button class="accent" @click="logout" :disabled="!loggedIn">
+              <span>退出登录</span>
+              <span>🚪</span>
             </button>
           </div>
         </div>
 
-        <p v-if="!files.length" class="meta-line">
-          当前暂无文件，可先点击“模拟上传元数据”或选择文件后“上传真实文件”。
-        </p>
+        <!-- 云盘卡片 -->
+        <div class="card">
+          <h3>云盘文件管理</h3>
+          
+          <!-- 操作区 -->
+          <div class="operations-panel">
+            <div class="operations-grid">
+              <button class="primary" @click="listFiles" :disabled="!loggedIn || loading">
+                <span v-if="loading" class="loading"></span>
+                <span v-else>📋 列出文件</span>
+              </button>
+              <button class="secondary" @click="uploadDemo" :disabled="!loggedIn || loading">
+                <span v-if="loading" class="loading"></span>
+                <span v-else>⬆️ 模拟上传</span>
+              </button>
+            </div>
+            
+            <div class="file-upload-area">
+              <div class="file-input-wrapper">
+                <input type="file" @change="onFileChange" id="fileInput" />
+                <label for="fileInput" class="file-input-label">选择文件</label>
+              </div>
+              <div class="selected-file" v-if="realFileName">
+                {{ realFileName }}
+              </div>
+              <div class="upload-button-wrapper">
+                <button class="accent" @click="uploadReal" :disabled="!loggedIn || loading || !realFile">
+                  <span v-if="loading" class="loading"></span>
+                  <span v-else>🚀 上传真实文件</span>
+                </button>
+              </div>
+            </div>
+          </div>
 
-        <ul v-else>
-          <li v-for="f in files" :key="f.id || f.name">
-            <div>
-              <strong>{{ f.name }}</strong>
-              — {{ f.size }} — {{ f.uploaded_at }}
-              <span v-if="f.is_binary" class="tag-binary">[真实文件]</span>
-              <span v-if="f.encrypted" class="tag-encrypted">[加密分享]</span>
-            </div>
-            <div class="meta-line">
-              <span v-if="f.share_token">
-                分享：{{ shareUrlFor(f) }}
-                <span v-if="f.share_expires_at"> · 有效期至 {{ f.share_expires_at }}</span>
-                <span v-if="f.share_password"> · 密码：{{ f.share_password }}</span>
-              </span>
-              <span v-else>尚未设置分享</span>
-            </div>
-            <div class="ops-line">
-              <button @click="shareFile(f)" :disabled="!loggedIn || loading">
-                设置 / 更新分享
-              </button>
-              <button
-                v-if="f.is_binary"
-                @click="downloadFile(f)"
-                :disabled="!loggedIn || loading"
-              >
-                下载
-              </button>
-            </div>
-          </li>
-        </ul>
+          <div v-if="!files.length && !loading" class="empty-state">
+            当前暂无文件，可先点击"模拟上传"或选择文件后"上传真实文件"
+          </div>
+
+          <ul class="file-list" v-else-if="files.length">
+            <li class="file-item" v-for="f in files" :key="f.id || f.name">
+              <div class="file-header">
+                <div class="file-name">{{ f.name }}</div>
+                <div class="file-tags">
+                  <span v-if="f.encrypted" class="tag encrypted">加密</span>
+                  <span v-if="f.is_binary" class="tag binary">真实文件</span>
+                </div>
+              </div>
+              
+              <div class="file-meta">
+                <div class="meta-item file-size">{{ f.size }}</div>
+                <div class="meta-item upload-time">{{ f.uploaded_at }}</div>
+              </div>
+              
+              <div class="share-info" v-if="f.share_token">
+                <div class="share-url">
+                  <a :href="shareUrlFor(f)" target="_blank" style="color: inherit; text-decoration: none;">
+                    {{ shareUrlFor(f) }}
+                  </a>
+                </div>
+                <div class="share-expiry" v-if="f.share_expires_at">
+                  有效期至 {{ f.share_expires_at }}
+                </div>
+                <div class="share-expiry" v-if="f.share_password">
+                  密码：{{ f.share_password }}
+                </div>
+              </div>
+              
+              <div class="file-actions">
+                <button class="secondary" @click="shareFile(f)" :disabled="!loggedIn || loading" style="font-size: 14px; padding: 8px 16px;">
+                  <span>🔗 设置分享</span>
+                </button>
+                <button class="primary" v-if="f.is_binary" @click="downloadFile(f)" 
+                        :disabled="!loggedIn || loading" style="font-size: 14px; padding: 8px 16px;">
+                  <span>⬇️ 下载</span>
+                </button>
+              </div>
+            </li>
+          </ul>
+          
+          <div v-if="loading && files.length === 0" class="empty-state">
+            <div class="loading" style="width: 30px; height: 30px; margin: 0 auto 16px;"></div>
+            加载中...
+          </div>
+        </div>
       </div>
     </main>
 
@@ -113,6 +645,7 @@
           return {
             authBase: "https://auth.localhost:5000",
             apiBase: "https://cloud.localhost:5002",
+            frontendBase: "https://cloud.localhost:4176",
             loggedIn: false,
             username: null,
             files: [],
@@ -216,20 +749,31 @@
             window.open(url, "_blank");
           },
           async logout() {
-            await fetch(`${this.apiBase}/session/logout`, { method: "POST", credentials: "include" });
-            // 同时让统一认证门户清除 sso_session，避免跨站点仍保持登录
+            await fetch(`${this.apiBase}/session/logout`, { 
+              method: "POST", 
+              credentials: "include" 
+            }).catch(() => {});
+            
             try {
-              await fetch(`${this.authBase}/auth/logout`, { method: "POST", credentials: "include" });
+              await fetch(`${this.authBase}/auth/session`, { 
+                method: "DELETE", 
+                credentials: "include" 
+              });
             } catch (_) {
-              // 忽略门户不可达等错误，前端仍继续清理本地状态
+              console.log("统一认证门户清除会话失败");
             }
+            
             this.loggedIn = false;
             this.username = null;
             this.files = [];
           },
           shareUrlFor(f) {
             if (!f.share_token) return "";
-            return `${this.apiBase}/share/${f.share_token}`;
+            if (f.share_password) {
+                return `${this.frontendBase}/share.html?token=${f.share_token}&password=${f.share_password}`;
+            } else {
+                return `${this.frontendBase}/share.html?token=${f.share_token}`;
+            }
           },
           async shareFile(file) {
             if (!this.loggedIn) { alert("请先登录"); return; }
@@ -239,28 +783,30 @@
             const pwd = window.prompt("访问密码（可选，加密分享）", file.share_password || "");
             this.loading = true;
             try {
-              const res = await fetch(`${this.apiBase}/files/share`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({
-                  file_id: file.id,
-                  expire_hours: expireHours,
-                  password: pwd || null,
-                }),
-              });
-              const data = await res.json();
-              if (!res.ok) { alert(JSON.stringify(data)); return; }
-              await this.listFiles();
-              alert(
-                `分享创建成功\n链接: ${data.share_url}\n` +
-                (data.need_password ? "密码: " + (pwd || "") : "无密码")
-              );
+                const res = await fetch(`${this.apiBase}/files/share`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        file_id: file.id,
+                        expire_hours: expireHours,
+                        password: pwd || null,
+                    }),
+                });
+                const data = await res.json();
+                if (!res.ok) { alert(JSON.stringify(data)); return; }
+                await this.listFiles();
+                alert(
+                    `分享创建成功！\n\n` +
+                    `分享页面链接: ${data.share_page_url}\n` +
+                    `直接下载链接: ${data.direct_download_url}\n\n` +
+                    (data.need_password ? `访问密码: ${pwd || ""}` : "无密码保护")
+                );
             } catch (e) {
-              console.error(e);
-              alert("创建分享失败");
+                console.error(e);
+                alert("创建分享失败");
             } finally {
-              this.loading = false;
+                this.loading = false;
             }
           },
         },

@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <title>文件分享 - 云盘系统</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+      :root {
+        --primary-color: #9A7B9E;
+        --primary-light: #C5A8C9;
+        --secondary-color: #B8C9B8;
+        --accent-color: #E6B89C;
+        --background-color: #F9F7F5;
+        --card-bg: #FFFFFF;
+        --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        --text-primary: #4A4A4A;
+        --text-secondary: #7A7A7A;
+        --border-color: #E5E0D7;
+        --success-color: #88C9A1;
+        --error-color: #E6A2A2;
+        --warning-color: #E6C9A2;
+        --hover-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+        --transition-speed: 0.3s;
+      }
+
+      body {
+        font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        margin: 0;
+        background: var(--background-color);
+        color: var(--text-primary);
+        line-height: 1.6;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 500px;
+      }
+
+      .card {
+        background: var(--card-bg);
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: var(--card-shadow);
+        border: 1px solid var(--border-color);
+        transition: all var(--transition-speed) ease;
+      }
+
+      .card:hover {
+        box-shadow: var(--hover-shadow);
+      }
+
+      h1 {
+        color: var(--primary-color);
+        margin: 0 0 30px 0;
+        font-size: 1.8rem;
+        font-weight: 600;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+      }
+
+      h1::before {
+        content: "🔗";
+        font-size: 2rem;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 40px 0;
+      }
+
+      .loading-spinner {
+        display: inline-block;
+        width: 50px;
+        height: 50px;
+        border: 3px solid rgba(154, 123, 158, 0.2);
+        border-radius: 50%;
+        border-top-color: var(--primary-color);
+        animation: spin 1s ease-in-out infinite;
+        margin-bottom: 20px;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      .status-message {
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        text-align: center;
+        font-weight: 500;
+      }
+
+      .error {
+        background: rgba(230, 162, 162, 0.1);
+        border: 1px solid rgba(230, 162, 162, 0.3);
+        color: var(--error-color);
+      }
+
+      .file-preview {
+        background: linear-gradient(135deg, rgba(154, 123, 158, 0.05), rgba(184, 201, 184, 0.05));
+        border-radius: 16px;
+        padding: 30px;
+        text-align: center;
+        margin-bottom: 24px;
+        border: 2px dashed rgba(154, 123, 158, 0.2);
+      }
+
+      .file-icon {
+        font-size: 64px;
+        margin-bottom: 20px;
+        color: var(--primary-color);
+      }
+
+      .file-name {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 10px;
+        word-break: break-word;
+      }
+
+      .file-meta {
+        color: var(--text-secondary);
+        font-size: 14px;
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+
+      .info-card {
+        background: rgba(184, 201, 184, 0.08);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+        border: 1px solid rgba(184, 201, 184, 0.3);
+      }
+
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        margin: 12px 0;
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(184, 201, 184, 0.2);
+      }
+
+      .info-row:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+      }
+
+      .label {
+        color: var(--text-secondary);
+        font-weight: 500;
+      }
+
+      .value {
+        color: var(--text-primary);
+        font-weight: 600;
+      }
+
+      .expiry-warning {
+        background: rgba(230, 201, 162, 0.15);
+        border: 1px solid rgba(230, 201, 162, 0.4);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 24px;
+        color: var(--warning-color);
+        text-align: center;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .expiry-warning::before {
+        content: "⚠️";
+      }
+
+      .password-section {
+        background: rgba(154, 123, 158, 0.05);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        border: 1px solid rgba(154, 123, 158, 0.2);
+      }
+
+      .password-section h3 {
+        color: var(--primary-color);
+        margin: 0 0 16px 0;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .password-section h3::before {
+        content: "🔒";
+      }
+
+      input {
+        width: 100%;
+        padding: 14px 18px;
+        border-radius: 10px;
+        border: 2px solid var(--border-color);
+        background: var(--card-bg);
+        color: var(--text-primary);
+        font-size: 16px;
+        box-sizing: border-box;
+        transition: all var(--transition-speed) ease;
+        margin-bottom: 16px;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(154, 123, 158, 0.1);
+      }
+
+      button {
+        width: 100%;
+        padding: 16px 24px;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 12px;
+        border: none;
+        cursor: pointer;
+        transition: all var(--transition-speed) ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+        color: white;
+        box-shadow: 0 4px 12px rgba(154, 123, 158, 0.3);
+      }
+
+      .btn-primary:hover:not(:disabled) {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(154, 123, 158, 0.4);
+      }
+
+      .btn-secondary {
+        background: linear-gradient(135deg, var(--secondary-color), #D4E4D4);
+        color: var(--text-primary);
+        box-shadow: 0 4px 12px rgba(184, 201, 184, 0.3);
+        margin-top: 16px;
+      }
+
+      .btn-secondary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(184, 201, 184, 0.4);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none !important;
+        box-shadow: none !important;
+      }
+
+      .success-message {
+        background: rgba(136, 201, 161, 0.1);
+        border: 1px solid rgba(136, 201, 161, 0.3);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+        color: var(--success-color);
+        text-align: center;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .success-message::before {
+        content: "✅";
+      }
+
+      .link-info {
+        background: rgba(154, 123, 158, 0.05);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 24px;
+        border: 1px solid rgba(154, 123, 158, 0.2);
+        font-size: 14px;
+      }
+
+      .link-info a {
+        color: var(--primary-color);
+        text-decoration: none;
+        word-break: break-all;
+      }
+
+      .link-info a:hover {
+        text-decoration: underline;
+      }
+
+      footer {
+        text-align: center;
+        margin-top: 32px;
+        color: var(--text-secondary);
+        font-size: 14px;
+      }
+
+      .back-link {
+        display: inline-block;
+        margin-top: 16px;
+        color: var(--primary-color);
+        text-decoration: none;
+        font-weight: 500;
+        transition: color var(--transition-speed) ease;
+      }
+
+      .back-link:hover {
+        color: var(--primary-light);
+        text-decoration: underline;
+      }
+
+      .encrypted-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(154, 123, 158, 0.1);
+        color: var(--primary-color);
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-left: 10px;
+      }
+
+      .encrypted-badge::before {
+        content: "🔐";
+      }
+
+      @media (max-width: 600px) {
+        body {
+          padding: 16px;
+        }
+        
+        .card {
+          padding: 24px;
+        }
+        
+        h1 {
+          font-size: 1.5rem;
+        }
+        
+        .file-preview {
+          padding: 20px;
+        }
+        
+        .file-icon {
+          font-size: 48px;
+        }
+      }
+    </style>
+</head>
+<body>
+    <div class="container" id="app">
+        <div class="card">
+            <h1>文件分享</h1>
+            
+            <div v-if="loading" class="loading">
+                <div class="loading-spinner"></div>
+                <p>正在加载分享信息...</p>
+            </div>
+
+            <div v-else-if="error" class="status-message error">
+                <p>{{ error }}</p>
+                <a href="https://cloud.localhost:4176/cloud.html" class="back-link">返回云盘</a>
+            </div>
+
+            <div v-else-if="fileInfo">
+                <!-- 文件预览 -->
+                <div class="file-preview">
+                    <div class="file-icon">
+                        {{ getFileIcon(fileInfo.name) }}
+                    </div>
+                    <div class="file-name">
+                        {{ fileInfo.name }}
+                        <span v-if="fileInfo.encrypted" class="encrypted-badge">加密</span>
+                    </div>
+                    <div class="file-meta">
+                        <span>大小: {{ fileInfo.size }}</span>
+                        <span>上传: {{ formatDate(fileInfo.uploaded_at) }}</span>
+                    </div>
+                </div>
+
+                <!-- 文件信息 -->
+                <div class="info-card">
+                    <div class="info-row">
+                        <span class="label">分享者</span>
+                        <span class="value">{{ fileInfo.owner }}</span>
+                    </div>
+                    <div class="info-row">
+                         <span class="label">分享时间</span>
+                         <span class="value">{{ formatDateTime(fileInfo.shared_created_at || fileInfo.uploaded_at) }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">有效期至</span>
+                        <span class="value">{{ formatDate(fileInfo.share_expires_at) }}</span>
+                    </div>
+                </div>
+
+                <!-- 过期警告 -->
+                <div v-if="isExpired" class="expiry-warning">
+                    此分享链接已过期
+                </div>
+
+                <!-- 密码输入 -->
+                <div v-if="needPassword && !passwordEntered" class="password-section">
+                    <h3>请输入访问密码</h3>
+                    <input 
+                        type="password" 
+                        v-model="password" 
+                        placeholder="输入分享密码" 
+                        @keyup.enter="verifyPassword"
+                        :disabled="verifying"
+                    />
+                    <button 
+                        class="btn-primary" 
+                        @click="verifyPassword"
+                        :disabled="!password || verifying"
+                    >
+                        <span v-if="verifying" class="loading-spinner" style="width: 20px; height: 20px; border-width: 2px;"></span>
+                        <span v-else>🔐 验证密码</span>
+                    </button>
+                </div>
+
+                <!-- 下载区域 -->
+                <div v-if="canDownload">
+                    <div class="success-message" v-if="passwordEntered">
+                        密码验证成功！您现在可以下载文件了。
+                    </div>
+                    
+                    <div class="link-info" v-if="fileInfo.download_url">
+                        <strong>下载链接：</strong><br>
+                        <a :href="fileInfo.download_url" target="_blank">{{ fileInfo.download_url }}</a>
+                    </div>
+
+                    <button class="btn-primary" @click="downloadFile">
+                        ⬇️ 下载文件
+                    </button>
+                    
+                    <a href="https://cloud.localhost:4176/cloud.html" class="back-link">
+                        返回我的云盘
+                    </a>
+                </div>
+
+                <footer>
+                    <p>云盘系统 · 安全分享</p>
+                    <p v-if="fileInfo.shared_via" style="font-size: 12px; opacity: 0.7;">分享ID: {{ fileInfo.shared_via }}</p>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        
+        createApp({
+            data() {
+                return {
+                    apiBase: "https://cloud.localhost:5002",
+                    loading: true,
+                    error: null,
+                    fileInfo: null,
+                    password: "",
+                    passwordEntered: false,
+                    verifying: false,
+                    shareToken: null,
+                    urlPassword: null
+                };
+            },
+            computed: {
+                needPassword() {
+                    return this.fileInfo && this.fileInfo.encrypted;
+                },
+                canDownload() {
+                    if (!this.fileInfo) return false;
+                    if (this.isExpired) return false;
+                    if (this.needPassword && !this.passwordEntered) return false;
+                    return this.fileInfo.is_binary === true;
+                },
+                isExpired() {
+                    if (!this.fileInfo || !this.fileInfo.share_expires_at) return false;
+                    const expiry = new Date(this.fileInfo.share_expires_at);
+                    return expiry < new Date();
+                }
+            },
+            mounted() {
+                this.loadShareInfo();
+            },
+            methods: {
+                async loadShareInfo() {
+                    try {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        this.shareToken = urlParams.get('token');
+                        this.urlPassword = urlParams.get('password');
+                        
+                        if (!this.shareToken) {
+                            this.error = "分享链接无效，缺少token参数";
+                            this.loading = false;
+                            return;
+                        }
+                        
+                        let apiUrl = `${this.apiBase}/share/${this.shareToken}`;
+                        if (this.urlPassword) {
+                            apiUrl += `?password=${encodeURIComponent(this.urlPassword)}`;
+                        }
+                        
+                        const response = await fetch(apiUrl, {
+                            method: "GET",
+                            mode: "cors",
+                            credentials: "include",
+                            headers: {
+                                "Accept": "application/json",
+                                "Content-Type": "application/json"
+                            }
+                        });
+                        
+                        if (response.status === 404) {
+                            this.error = "分享链接不存在或已失效";
+                            this.loading = false;
+                            return;
+                        } else if (response.status === 410) {
+                            this.error = "分享已过期";
+                            this.loading = false;
+                            return;
+                        } else if (response.status === 403) {
+                            this.error = "密码错误，请重新输入";
+                            this.loading = false;
+                            return;
+                        } else if (!response.ok) {
+                            this.error = `服务器错误: HTTP ${response.status}`;
+                            this.loading = false;
+                            return;
+                        }
+                        
+                        const data = await response.json();
+                        if (data.error) {
+                            this.error = data.error;
+                            this.loading = false;
+                            return;
+                        }
+                        
+                        this.fileInfo = data;
+                        
+                        if (this.urlPassword && this.needPassword) {
+                            this.password = this.urlPassword;
+                            this.passwordEntered = true;
+                            this.addDownloadUrl();
+                        }
+                        
+                    } catch (err) {
+                        console.error("加载分享信息失败:", err);
+                        if (err.name === 'TypeError' && err.message.includes('fetch')) {
+                            this.error = "网络请求失败，请检查API服务是否正在运行";
+                        } else {
+                            this.error = `请求失败: ${err.message}`;
+                        }
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async verifyPassword() {
+                    if (!this.password) {
+                        this.error = "请输入密码";
+                        return;
+                    }
+                    
+                    this.verifying = true;
+                    this.error = null;
+                    
+                    try {
+                        const apiUrl = `${this.apiBase}/share/${this.shareToken}?password=${encodeURIComponent(this.password)}`;
+                        
+                        const response = await fetch(apiUrl, {
+                            method: "GET",
+                            mode: "cors",
+                            headers: {
+                                "Accept": "application/json"
+                            }
+                        });
+                        
+                        if (response.status === 403) {
+                            this.error = "密码错误，请重新输入";
+                            return;
+                        } else if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}));
+                            this.error = errorData.error || `验证失败: HTTP ${response.status}`;
+                            return;
+                        }
+                        
+                        const data = await response.json();
+                        this.passwordEntered = true;
+                        this.fileInfo = data;
+                        this.error = null;
+                        
+                        this.updateUrlWithPassword();
+                        this.addDownloadUrl();
+                        
+                    } catch (err) {
+                        console.error("密码验证失败:", err);
+                        this.error = "验证失败，请检查网络连接后重试";
+                    } finally {
+                        this.verifying = false;
+                    }
+                },
+                
+                addDownloadUrl() {
+                    if (this.fileInfo && this.fileInfo.is_binary) {
+                        this.fileInfo.download_url = `${this.apiBase}/share/${this.shareToken}/download?password=${encodeURIComponent(this.password)}`;
+                    }
+                },
+                
+                updateUrlWithPassword() {
+                    const url = new URL(window.location);
+                    url.searchParams.set('password', this.password);
+                    window.history.replaceState({}, '', url);
+                },
+                
+                async downloadFile() {
+                    if (!this.fileInfo.download_url) {
+                        this.error = "下载链接无效";
+                        return;
+                    }
+                    
+                    try {
+                        const link = document.createElement('a');
+                        link.href = this.fileInfo.download_url;
+                        link.download = this.fileInfo.name;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        this.showMessage("文件下载已开始", "success");
+                        
+                    } catch (err) {
+                        console.error("下载失败:", err);
+                        this.error = "下载失败，请重试";
+                    }
+                },
+                
+                getFileIcon(filename) {
+                    const ext = filename.split('.').pop().toLowerCase();
+                    const icons = {
+                        'pdf': '📕',
+                        'doc': '📝',
+                        'docx': '📝',
+                        'txt': '📄',
+                        'jpg': '🖼️',
+                        'jpeg': '🖼️',
+                        'png': '🖼️',
+                        'zip': '📦',
+                        'rar': '📦',
+                        'mp3': '🎵',
+                        'mp4': '🎬',
+                        'exe': '⚙️',
+                        'xls': '📊',
+                        'xlsx': '📊'
+                    };
+                    return icons[ext] || '📁';
+                },
+                
+                formatDate(dateString) {
+                    if (!dateString) return '未知';
+                    const date = new Date(dateString);
+                    return date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                },
+                
+                formatDateTime(dateString) {
+                    if (!dateString) return '未知';
+                    const date = new Date(dateString);
+                    return date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                },
+                
+                showMessage(message, type = 'success') {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `status-message ${type === 'success' ? 'success-message' : 'error'}`;
+                    messageDiv.textContent = message;
+                    messageDiv.style.position = 'fixed';
+                    messageDiv.style.top = '20px';
+                    messageDiv.style.right = '20px';
+                    messageDiv.style.zIndex = '1000';
+                    messageDiv.style.maxWidth = '300px';
+                    
+                    document.body.appendChild(messageDiv);
+                    
+                    setTimeout(() => {
+                        document.body.removeChild(messageDiv);
+                    }, 3000);
+                }
+            }
+        }).mount("#app");
+    </script>
+</body>
+</html>

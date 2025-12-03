@@ -211,6 +211,23 @@ def login():
     )
     return resp
 
+@app.route("/auth/logout", methods=["POST"])
+def session_logout():
+    session_token = request.cookies.get("sso_session")
+    if session_token in SESSIONS:
+        SESSIONS.pop(session_token, None)
+    resp = jsonify({"message": "sso logged out"})
+    # 使用与登录时相同的属性删除 cookie，确保跨站注销生效
+    resp.set_cookie(
+        "sso_session",
+        "",
+        expires=0,
+        httponly=True,
+        secure=True,
+        samesite="None",
+        domain=request.host.split(":")[0],
+    )
+    return resp
 
 @app.route("/auth/authorize", methods=["GET"])
 def authorize():

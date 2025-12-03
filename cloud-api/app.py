@@ -243,7 +243,15 @@ def session_logout():
     session_id = request.cookies.get("cloud_session")
     SESSIONS.pop(session_id, None)
     resp = jsonify({"message": "logged out"})
-    resp.set_cookie("cloud_session", "", expires=0, domain=request.host.split(":")[0])
+    resp.set_cookie(
+        "cloud_session",
+        "",
+        expires=0,
+        httponly=True,
+        secure=True,
+        samesite="None",
+        domain=request.host.split(":")[0],
+    )
     return resp
 
 

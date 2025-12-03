@@ -355,7 +355,15 @@ def session_logout():
     if session_id in SESSIONS:
         SESSIONS.pop(session_id, None)
     resp = jsonify({"message": "logged out"})
-    resp.set_cookie("academic_session", "", expires=0, domain=request.host.split(":")[0])
+    resp.set_cookie(
+        "academic_session",
+        "",
+        expires=0,
+        httponly=True,
+        secure=True,
+        samesite="None",
+        domain=request.host.split(":")[0],
+    )
     return resp
 
 

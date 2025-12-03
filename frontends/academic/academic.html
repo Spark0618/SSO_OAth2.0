@@ -381,6 +381,12 @@
           },
           async logout() {
             await fetch(`${this.apiBase}/session/logout`, { method: "POST", credentials: "include" });
+            // 同时让统一认证门户清除 sso_session，避免跨站点仍保持登录
+            try {
+              await fetch(`${this.authBase}/auth/logout`, { method: "POST", credentials: "include" });
+            } catch (_) {
+              // 忽略门户不可达等错误，前端仍继续清理本地状态
+            }
             this.loggedIn = false;
             this.courses = [];
             this.grades = {};

@@ -48,19 +48,43 @@ app = Flask(__name__)
 
 # ========= CORS =========
 @app.after_request
-def cors(resp):
-    origin = request.headers.get("Origin")
-    if origin:
-        resp.headers["Access-Control-Allow-Origin"] = origin
-        resp.headers["Vary"] = "Origin"
-        resp.headers["Access-Control-Allow-Credentials"] = "true"
+def add_cors_headers(response):
+    """添加CORS头部"""
+    # 允许的来源列表
+    allowed_origins = [
+        "https://cloud.localhost:4176",
+        "https://auth.localhost:4173",
+        "https://auth.localhost:5000",
+        "http://localhost:4176",
+        "http://localhost:5000",
+        "http://127.0.0.1:4176",
+        "http://127.0.0.1:5000"
+    ]
+    
+    origin = request.headers.get('Origin')
+    
+    if origin and origin in allowed_origins:
+        response.headers['Access-Control-Allow-Origin'] = origin
+    elif origin and origin.endswith('.localhost:4176'):
+        # 允许所有localhost:4176的子域名
+        response.headers['Access-Control-Allow-Origin'] = origin
     else:
-        resp.headers["Access-Control-Allow-Origin"] = "*"
-    resp.headers["Access-Control-Allow-Headers"] = (
-        "Content-Type,Authorization,X-Client-Cert,X-Client-Cert-Fingerprint"
+        # 生产环境应该更严格，开发环境可以暂时使用*
+        response.headers['Access-Control-Allow-Origin'] = '*'
+    
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = (
+        'Content-Type, Authorization, X-Session-Token, '
+        'X-Client-Cert, X-Client-Cert-Fingerprint, '
+        'Origin, Accept, X-Requested-With'
     )
-    resp.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
-    return resp
+    response.headers['Access-Control-Expose-Headers'] = (
+        'Content-Length, Content-Range, Content-Disposition'
+    )
+    response.headers['Access-Control-Max-Age'] = '86400'  # 24小时
+    
+    return response
 
 
 @app.route("/health", methods=["GET"])
@@ -403,14 +427,12 @@ def download_file(file_id):
     return send_file(storage_path, as_attachment=True, download_name=target["name"])
 
 
-# ========= 文件分享 =========
 @app.route("/files/share", methods=["POST"])
 def share_file():
     """
     为某个文件创建/更新分享链接：
     - 需要登录
     - 只能分享自己的文件
-    - 可选 password 表示“加密分享”（给链接加密码，不是加密文件内容）
     """
     data, err = _validate_token()
     if err:
@@ -437,59 +459,215 @@ def share_file():
 
     token = uuid.uuid4().hex
     expire_at = datetime.utcnow() + timedelta(hours=expire_hours)
+    created_at = datetime.utcnow()  # 分享创建时间
 
+    # 更新文件记录中的分享信息
     target["share_token"] = token
     target["share_password"] = password
     target["share_expires_at"] = expire_at.isoformat() + "Z"
     target["encrypted"] = bool(password)
 
+    # 保存到SHARES字典
     SHARES[token] = {
         "token": token,
         "file_id": target["id"],
         "owner": username,
         "password": password,
         "expires_at": expire_at,
+        "created_at": created_at,  # 保存创建时间
     }
 
-    base = request.host_url.rstrip("/")
-    share_url = f"{base}/share/{token}"
+    print(f"✅ 创建分享成功:")
+    print(f"  创建时间: {created_at}")
+    print(f"  过期时间: {expire_at}")
+    print(f"  有效期: {expire_hours}小时")
+
+    # 生成前端分享链接
+    frontend_base = "https://cloud.localhost:4176"
+    if password:
+        share_page_url = f"{frontend_base}/share.html?token={token}&password={password}"
+    else:
+        share_page_url = f"{frontend_base}/share.html?token={token}"
+    
+    # 直接下载链接
+    direct_download_url = f"https://cloud.localhost:5002/share/{token}/download"
+    if password:
+        direct_download_url += f"?password={password}"
+    
     return jsonify(
         {
-            "message": "share created",
+            "message": "分享创建成功",
             "share_token": token,
-            "share_url": share_url,
-            "expires_at": target["share_expires_at"],
+            "share_page_url": share_page_url,
+            "direct_download_url": direct_download_url,
+            "created_at": created_at.isoformat() + "Z",  # 返回创建时间
+            "expires_at": expire_at.isoformat() + "Z",   # 返回过期时间
+            "expire_hours": expire_hours,                # 返回有效期（小时）
             "need_password": bool(password),
         }
     )
 
+# ========= 添加全局OPTIONS请求处理器 =========
+@app.route("/share/<token>", methods=["OPTIONS"])
+def options_share(token):
+    """处理/share/<token>的OPTIONS预检请求"""
+    response = jsonify({})
+    response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
-@app.route("/share/<token>", methods=["GET"])
+@app.route("/debug/shares", methods=["GET"])
+def debug_shares():
+    """调试端点：查看所有分享状态"""
+    now = datetime.utcnow()
+    shares_info = []
+    
+    for token, share in SHARES.items():
+        file = next((f for f in FILES if f.get("id") == share["file_id"]), None)
+        shares_info.append({
+            "token": token,
+            "file_id": share["file_id"],
+            "file_name": file.get("name") if file else "未知",
+            "owner": share.get("owner"),
+            "has_password": bool(share.get("password")),
+            "expires_at": share.get("expires_at").isoformat() if share.get("expires_at") else None,
+            "is_expired": share.get("expires_at") < now if share.get("expires_at") else True,
+            "created_at": share.get("created_at").isoformat() if share.get("created_at") else None
+        })
+    
+    return jsonify({
+        "total_shares": len(SHARES),
+        "total_files": len(FILES),
+        "current_time": now.isoformat(),
+        "shares": shares_info
+    })
+
+
+@app.route("/debug/files", methods=["GET"])
+def debug_files():
+    """调试端点：查看所有文件"""
+    files_info = []
+    for f in FILES:
+        files_info.append({
+            "id": f.get("id"),
+            "name": f.get("name"),
+            "owner": f.get("owner"),
+            "is_binary": f.get("is_binary"),
+            "share_token": f.get("share_token"),
+            "encrypted": f.get("encrypted"),
+            "share_expires_at": f.get("share_expires_at")
+        })
+    
+    return jsonify({
+        "total_files": len(FILES),
+        "files": files_info
+    })
+
+
+
+@app.route("/share/<token>", methods=["GET", "OPTIONS"])
 def access_share(token):
     """
     分享访问接口（不需要登录）：
     - GET /share/<token>?password=xxx
     - 如果设置了密码，需要带对的密码
-    - 这里只返回文件元信息（示例），不做真实下载
+    """
+    # 如果是OPTIONS请求，直接返回
+    if request.method == "OPTIONS":
+        response = jsonify({})
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response
+    
+    print(f"🔍 处理分享请求: token={token}")
+    
+    share = SHARES.get(token)
+    if not share:
+        print(f"  ❌ 未找到分享记录: {token}")
+        return jsonify({"error": "分享不存在或已失效"}), 404
+    
+    # 检查是否过期
+    if share["expires_at"] < datetime.utcnow():
+        print(f"  ❌ 分享已过期: {token}, 过期时间: {share['expires_at']}")
+        # 清理过期分享
+        SHARES.pop(token, None)
+        return jsonify({"error": "分享已过期"}), 410
+    
+    # 验证密码
+    pwd = request.args.get("password") or ""
+    if share["password"] and pwd != share["password"]:
+        print(f"  ❌ 密码错误: token={token}, 输入密码={pwd}, 正确密码={share['password']}")
+        return jsonify({"error": "密码错误"}), 403
+    
+    # 查找对应的文件
+    target = next((f for f in FILES if f.get("id") == share["file_id"]), None)
+    if not target:
+        print(f"  ❌ 文件不存在: file_id={share['file_id']}")
+        return jsonify({"error": "文件不存在"}), 404
+    
+    print(f"  ✅ 分享验证通过: token={token}, 文件={target.get('name')}")
+    
+    public = {k: v for k, v in target.items() if k != "storage_path"}
+    public["shared_via"] = token
+    public["owner"] = share.get("owner", "unknown")
+    
+    # 添加分享创建时间和格式化
+    # 分享创建时间（数据库中的created_at）
+    if "created_at" in share:
+        public["shared_created_at"] = share["created_at"].isoformat() + "Z"
+    else:
+        # 兼容旧数据，如果没有创建时间，使用当前时间
+        public["shared_created_at"] = datetime.utcnow().isoformat() + "Z"
+    
+    # 分享过期时间
+    public["share_expires_at"] = share["expires_at"].isoformat() + "Z"
+    
+    # 文件上传时间（保持不变）
+    public["uploaded_at"] = target.get("uploaded_at", "")
+    
+    return jsonify(public)
+
+
+@app.route("/share/<token>/download", methods=["GET"])
+def download_share(token):
+    """
+    通过分享令牌下载文件：
+    - 不需要登录
+    - 需要验证分享令牌和密码（如果设置了密码）
     """
     share = SHARES.get(token)
     if not share:
-        return jsonify({"error": "share not found"}), 404
+        return jsonify({"error": "分享不存在或已失效"}), 404
 
     if share["expires_at"] < datetime.utcnow():
-        return jsonify({"error": "share expired"}), 410
+        return jsonify({"error": "分享已过期"}), 410
 
+    # 验证密码（从查询参数获取）
     pwd = request.args.get("password") or ""
     if share["password"] and pwd != share["password"]:
-        return jsonify({"error": "invalid password"}), 403
+        return jsonify({"error": "密码错误"}), 403
 
     target = next((f for f in FILES if f.get("id") == share["file_id"]), None)
     if not target:
-        return jsonify({"error": "file not found"}), 404
+        return jsonify({"error": "文件不存在"}), 404
 
-    public = {k: v for k, v in target.items() if k != "storage_path"}
-    public["shared_via"] = token
-    return jsonify(public)
+    storage_path = target.get("storage_path")
+    if not storage_path or not os.path.exists(storage_path):
+        return jsonify({"error": "文件已从服务器删除"}), 410
+
+    # 检查是否是二进制文件（真实文件）
+    if not target.get("is_binary"):
+        return jsonify({"error": "此文件不支持直接下载"}), 400
+
+    return send_file(
+        storage_path, 
+        as_attachment=True, 
+        download_name=target["name"]
+    )
 
 
 if __name__ == "__main__":

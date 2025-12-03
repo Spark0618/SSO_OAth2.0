@@ -1,53 +1,40 @@
 erDiagram
     users {
-        int id PK
-        string username UNIQUE
-        string password_hash
-        string role
-        datetime created_at
+        int user_id PK "用户ID"
+        string username "账号"
+        string password_hash "密码哈希"
+        string role "角色 (student, teacher)"
     }
 
     students {
-        int id PK
-        int user_id UNIQUE FK
-        string name
-        string student_no UNIQUE
-        string gender
-        string hometown
-        string grade
-        string college
-        string major
+        int student_id PK "学生档案ID"
+        int user_id FK "关联用户ID"
+        string name "姓名"
+        string student_number "学号"
     }
 
     teachers {
-        int id PK
-        int user_id UNIQUE FK
-        string name
-        string employee_no UNIQUE
-        string title
-        string department
+        int teacher_id PK "教师档案ID"
+        int user_id FK "关联用户ID"
+        string name "姓名"
+        string title "职称"
     }
 
     courses {
-        int id PK
-        string code UNIQUE
-        string title
-        int teacher_id FK
-        string description
-        int day
-        int slot
-        string location
+        int course_id PK "课程ID"
+        string course_name "课程名称"
+        int teacher_id FK "授课教师ID"
     }
 
     enrollments {
-        int id PK
-        int course_id FK
-        int student_id FK
-        string grade
+        int student_id FK "学生ID"
+        int course_id FK "课程ID"
+        float grade "成绩"
     }
 
-    users ||--|| students : 1-1_via_user_id
-    users ||--|| teachers : 1-1_via_user_id
-    teachers ||--o{ courses : 1-n_via_teacher_id
-    courses ||--o{ enrollments : 1-n_via_course_id
-    students ||--o{ enrollments : 1-n_via_student_id
+    users ||--o| students : "拥有档案"
+    users ||--o| teachers : "拥有档案"
+    teachers ||--|{ courses : "讲授"
+    students ||--|{ enrollments : "参与"
+    courses ||--|{ enrollments : "包含"
+

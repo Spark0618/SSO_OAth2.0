@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据库 E-R 关系图</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .section {
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .section-icon {
+            font-size: 1.3em;
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .diagram-container {
+            background: #f9f9f9;
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            overflow: auto;
+        }
+        
+        .description-box {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .description-box h4 {
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+        
+        .description-box p {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+        
+        .entity-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+        }
+        
+        .entity-table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        .entity-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .entity-table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .entity-table .entity-name {
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        
+        .badge-primary {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        .badge-foreign {
+            background: #4ecdc4;
+            color: white;
+        }
+        
+        .badge-unique {
+            background: #45b7d1;
+            color: white;
+        }
+        
+        .relationship-list {
+            margin: 20px 0;
+        }
+        
+        .relationship-item {
+            background: white;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        
+        .relationship-item strong {
+            color: #667eea;
+        }
+        
+        .constraint {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+        
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .legend-color {
+            width: 30px;
+            height: 20px;
+            border-radius: 3px;
+        }
+        
+        footer {
+            background: #f5f5f5;
+            padding: 20px;
+            text-align: center;
+            color: #999;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                border-radius: 0;
+            }
+            
+            .entity-table {
+                font-size: 0.9em;
+            }
+            
+            header h1 {
+                font-size: 1.8em;
+            }
+        }
+        
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 数据库 E-R 关系图</h1>
+            <p>SSO OAuth2.0 学术信息系统 - 数据模型设计</p>
+        </header>
+        
+        <div class="content">
+            <div class="summary-stats">
+                <div class="stat-box">
+                    <div class="stat-number">20+</div>
+                    <div class="stat-label">数据库表</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">50+</div>
+                    <div class="stat-label">字段属性</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">15+</div>
+                    <div class="stat-label">关系映射</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">MySQL</div>
+                    <div class="stat-label">8.0+</div>
+                </div>
+            </div>
+            
+            <!-- 完整E-R图 -->
+            <div class="section">
+                <div class="section-title">
+                    <div class="section-icon">🔗</div>
+                    <span>完整数据库 E-R 关系图</span>
+                </div>
+                
+                <div class="description-box">
+                    <h4>系统说明</h4>
+                    <p>
+                        下图展示了学术信息系统的完整数据库模型，包括用户管理、课程管理、作业系统、资源管理等核心模块。
+                        采用关系型数据库设计，支持复杂的业务关系。
+                    </p>
+                </div>
+                
+                <div class="diagram-container">
+                    <div class="mermaid">
+erDiagram
+    "用户" ||--o{ "学生" : has
+    "用户" ||--o{ "教师" : has
+    "用户" ||--o{ "通知" : receives
+    "用户" ||--o{ "登录日志" : creates
+    
+    "教师" ||--o{ "课程" : teaches
+    "教师" ||--o{ "课程公告" : publishes
+    "教师" ||--o{ "作业" : assigns
+    "教师" ||--o{ "课程资源" : manages
+    "教师" ||--o{ "选课申请" : processes
+    
+    "学生" ||--o{ "选课" : enrolls
+    "学生" ||--o{ "作业提交" : submits
+    "学生" ||--o{ "学习日志" : creates
+    "学生" ||--o{ "选课申请" : requests
+    
+    "课程" ||--o{ "选课" : has
+    "课程" ||--o{ "课程公告" : has
+    "课程" ||--o{ "作业" : has
+    "课程" ||--o{ "课程资源" : has
+    "课程" ||--o{ "课程时间表" : has
+    
+    "作业" ||--o{ "作业提交" : receives
+    "作业" ||--o{ "作业资源" : has
+    
+    "作业提交" ||--o{ "提交文件" : includes
+    
+    "课程资源" ||--o{ "资源标签" : tagged_with
+    
+    "学生" ||--o{ "学习日志" : generates
+    "课程" ||--o{ "学习日志" : recorded_in
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 实体详解 -->
+            <div class="section">
+                <div class="section-title">
+                    <div class="section-icon">📋</div>
+                    <span>核心实体及属性详解</span>
+                </div>
+                
+                <!-- 用户管理表 -->
+                <div class="description-box">
+                    <h4>用户管理模块 (User Management)</h4>
+                    <p>
+                        包含用户基础信息表及其角色特定信息表。采用单表继承和连接表继承的混合策略。
+                    </p>
+                </div>
+                
+                <table class="entity-table">
+                    <thead>
+                        <tr>
+                            <th>表名</th>
+                            <th>说明</th>
+                            <th>主要字段</th>
+                            <th>关键特性</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="entity-name">users</span></td>
+                            <td>系统用户基表</td>
+                            <td>id, username, password_hash, role, email, is_active, created_at</td>
+                            <td>
+                                <span class="badge badge-primary">Primary Key</span>
+                                <span class="badge badge-unique">Unique(username)</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="entity-name">students</span></td>
+                            <td>学生信息表</td>
+                            <td>id, user_id, student_no, major, department, grade, advisor_id, status</td>
+                            <td>
+                                <span class="badge badge-foreign">FK(user_id)</span>
+                                <span class="badge badge-foreign">FK(advisor_id)</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="entity-name">teachers</span></td>
+                            <td>教师信息表</td>
+                            <td>id, user_id, teacher_no, department, title, office, status</td>
+                            <td>
+                                <span class="badge badge-foreign">FK(user_id)</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="entity-name">login_logs</span></td>
+                            <td>登录日志表</td>
+                            <td>id, user_id, ip_address, user_agent, login_time, is_successful</td>
+                            <td>
+                                <span class="badge badge-foreign">FK(user_id)</span>
+                                审计追踪
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="constraint">
+                    <strong>💡 约束条件：</strong>
+                    <ul style="margin-top: 8px; padding-left: 20px;">
+                        <li>Student.user_id 和 Teacher.user_id 形成一一关系，一个用户只能是学生或教师</li>
+                        <li>Student.advisor_id 外键指向 Teacher.id，建立师生导师关系</li>
+                        <li>用户密码使用 PBKDF2 加密存储</li>
+                    </ul>
+                </div>
+                
+                <!-- 课程管理表 -->
+                <div class="description-box" style="margin-top: 30px;">
+                    <h4>课程管理模块 (Course Management)</h4>
+                    <p>
+                        处理课程信息、选课、课表、公告等课程相关的数据。
+                    </p>
+                </div>
+                
+                <table class="entity-table">
+                    <thead>
+                        <tr>
+                            <th>表名</th>
+                            <th>说明</th>
+                            <th>主要字段</th>
+                            <th>关键特性</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="entity-name">courses</span></td>
+                            <td>课程主表</td>
+                            <td>id, code, title, teacher_id, credits, semester, year, location, max_students</td>
+                            <td>
+                                <span class="badge badge-primary">Primary Key</span>
+                                <span class="badge badge-unique">Unique(code)</span>
+                                <span class="badge badge-foreign">FK(teacher_id)</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="entity-name">enrollments</span></td>
+                            <td>选课记录表</td>
+                            <td>id, student_id, course_id, grade, status, enrolled_at, dropped_at</td>
+                            <td>
+                                <span class="badge badge-foreign">FK(student_id)</span>
+                                <span class="badge badge-foreign">FK(course_id)</span>
+                                多对多关系
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="entity-name">course_schedules</span></td>
+                            <td>课表记录表</td>
+                            <td>id, course_id, day, slot, location, start_date, end_date, is_recurring</td>
+                            <td>
+                                <span class="badge badge-foreign">FK(course_id)</span>
+                                支持重复课表
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="entity-name">course_announcements</span></td>
+                            <td>课程公告表</td>
+                            <td>id, title, content, teacher_id, is_pinned, is_public, created_at</td>
+                            <td>
+                                <span class="badge badge-foreign">FK(teacher_id)</span>
+                                支持公开/私有
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="entity-name">enrollment_requests</span></td>
+                            <td>选课申请表</td>
+                            <td>id, student_id, course_id, reason, status, processed_by, processed_at</td>
+                            <td>
+                                <span class="badge badge-foreign">FK(student_id)</span>
+                                <span class="badge badge-foreign">FK(course_id)</span>
+                                工作流管理
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="constraint">
+                    <strong>💡 约束条件：</strong>
+                    <ul style="margin-top: 8px; padding-left: 20px;">
+                        <li>Enrollment 实现学生(Student)和课程(Course)之间的多对多关系</li>
+                        <li>课程代码(code)全局唯一，用于标识不同课程</li>
+                        <li>选课申请状态流转：pending → approved/rejected</li>
+                    </ul>
+                </div>
+                
+                <!-- 作业系统表 -->
+                <div class="description-box" style="margin-top: 30px;">
+                    <h4>作业系统模块 (Assignment System)</h4>
+                    <p>
+                        管理作业发布、学生提交、文件管理和评分功能。
+                    </p>
+                </div>
+                
+                <table class="entity-table">
+                    <thead>
+                        <tr>
+                            <th>表名</th>
+                            <th>说明</th>
+                            <th>主要字段</th>
+                            <th>关键特性</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="entity-name">assignments</span></td>
+                            <td>作业主表</td>
+                            <td>id, title, description, course_id, teacher_id, max_score, due_date, is_published</td>
+                            <td>
+                                <span class="badge badge-foreign">FK(course_id)</span>
+                                <span class="badge badge-foreign">FK(teacher_id)</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="entity-name">assignment_submissions</span></td>
+                            <td>作业提交表</td>
+                            <td>id, assignment_id, student_id, content, score, feedback, submitted_at, is_late</td>
+                            <td>
+                                <span class="badge badge-foreign">FK(assignment_id)</span>
+                                <span class="badge badge-foreign">FK(student_id)</span>
+                                支持迟交检测
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="entity-name">submission_files</span></td>
+                            <td>提交文件表</td>
+                            <td>id, submission_id, filename, file_path, file_size, mime_type, uploaded_at</td>
+                            <td>
+                                <span class="badge badge-foreign">FK(submission_id)</span>
+                                文件元数据管理
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="entity-name">assignment_resources</span></td>
+                            <td>作业资源表</td>
+                            <td>id, assignment_id, title, file_path, file_size, mime_type</td>
+                            <td>
+                                <span class="badge badge-foreign">FK(assignment_id)</span>
+                                教师发布资源
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <!-- 资源管理表 -->
+                <div class="description-box" style="margin-top: 30px;">
+                    <h4>资源管理模块 (Resource Management)</h4>
+                    <p>
+                        管理课程资源、标签、权限等。
+                    </p>
+                </div>
+                
+                <table class="entity-table">
+                    <thead>
+                        <tr>
+                            <th>表名</th>
+                            <th>说明</th>
+                            <th>主要字段</th>
+                            <th>关键特性</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="entity-name">course_resources</span></td>
+                            <td>课程资源表</td>
+                            <td>id, title, description, course_id, teacher_id, file_path, is_public, download_count</td>
+                            <td>
+                                <span class="badge badge-foreign">FK(course_id)</span>
+                                <span class="badge badge-foreign">FK(teacher_id)</span>
+                                下载计数
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="entity-name">resource_tags</span></td>
+                            <td>资源标签表</td>
+                            <td>id, name, color</td>
+                            <td>
+                                <span class="badge badge-unique">Unique(name)</span>
+                                支持颜色标签
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="entity-name">resource_tags (关联)</span></td>
+                            <td>资源-标签多对多</td>
+                            <td>resource_id, tag_id</td>
+                            <td>多对多关系</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <!-- 通知系统表 -->
+                <div class="description-box" style="margin-top: 30px;">
+                    <h4>通知系统模块 (Notification System)</h4>
+                    <p>
+                        管理系统通知和实时消息。
+                    </p>
+                </div>
+                
+                <table class="entity-table">
+                    <thead>
+                        <tr>
+                            <th>表名</th>
+                            <th>说明</th>
+                            <th>主要字段</th>
+                            <th>关键特性</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="entity-name">notifications</span></td>
+                            <td>通知表</td>
+                            <td>id, user_id, title, content, type, related_id, is_read, created_at</td>
+                            <td>
+                                <span class="badge badge-foreign">FK(user_id)</span>
+                                多种类型通知
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <!-- 系统配置表 -->
+                <div class="description-box" style="margin-top: 30px;">
+                    <h4>系统配置模块 (System Configuration)</h4>
+                    <p>
+                        存储系统级配置参数。
+                    </p>
+                </div>
+                
+                <table class="entity-table">
+                    <thead>
+                        <tr>
+                            <th>表名</th>
+                            <th>说明</th>
+                            <th>主要字段</th>
+                            <th>关键特性</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="entity-name">system_configs</span></td>
+                            <td>系统配置表</td>
+                            <td>id, key, value, description, is_public, updated_at</td>
+                            <td>
+                                <span class="badge badge-unique">Unique(key)</span>
+                                键值对存储
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="entity-name">study_logs</span></td>
+                            <td>学习日志表</td>
+                            <td>id, student_id, course_id, activity_type, details, duration, created_at</td>
+                            <td>
+                                <span class="badge badge-foreign">FK(student_id)</span>
+                                行为追踪
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 关系说明 -->
+            <div class="section">
+                <div class="section-title">
+                    <div class="section-icon">🔀</div>
+                    <span>关键关系说明</span>
+                </div>
+                
+                <div class="relationship-list">
+                    <div class="relationship-item">
+                        <strong>一对多 (1:N)</strong><br>
+                        教师 → 课程 (一个教师可以教多个课程)<br>
+                        课程 → 选课 (一个课程可以有多个学生选课)<br>
+                        课程 → 作业 (一个课程可以发布多个作业)<br>
+                        作业 → 提交 (一个作业可以收到多个学生的提交)
+                    </div>
+                    
+                    <div class="relationship-item">
+                        <strong>多对多 (N:N)</strong><br>
+                        学生 ←→ 课程 (通过 enrollments 表)<br>
+                        课程资源 ←→ 标签 (通过 resource_tags 关联表)<br>
+                        课程 ←→ 公告 (通过 announcement_courses 关联表)
+                    </div>
+                    
+                    <div class="relationship-item">
+                        <strong>自关系</strong><br>
+                        Student.advisor_id → Teacher.id (学生的导师是教师，形成师生关系)
+                    </div>
+                    
+                    <div class="relationship-item">
+                        <strong>组合关系</strong><br>
+                        User 作为基类，通过外键与 Student 和 Teacher 形成一一或零一多的关系。<br>
+                        一个用户账号可以绑定学生身份或教师身份。
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 设计原则 -->
+            <div class="section">
+                <div class="section-title">
+                    <div class="section-icon">📐</div>
+                    <span>数据库设计原则</span>
+                </div>
+                
+                <div class="description-box">
+                    <h4>规范化设计</h4>
+                    <p>
+                        数据库遵循第三范式(3NF)设计原则，消除了冗余数据，每个表都有明确的主键，
+                        外键关系完整定义，确保数据的一致性和完整性。
+                    </p>
+                </div>
+                
+                <div class="description-box">
+                    <h4>索引策略</h4>
+                    <p>
+                        在以下字段建立索引以提高查询性能：<br>
+                        • users: username, email<br>
+                        • courses: code<br>
+                        • students: student_no<br>
+                        • teachers: teacher_no<br>
+                        • 外键字段：所有 *_id 字段
+                    </p>
+                </div>
+                
+                <div class="description-box">
+                    <h4>时间追踪</h4>
+                    <p>
+                        大多数表都包含 created_at 和 updated_at 字段，支持自动时间戳更新，
+                        便于审计、日志和数据恢复。
+                    </p>
+                </div>
+                
+                <div class="description-box">
+                    <h4>状态管理</h4>
+                    <p>
+                        使用 status 字段管理业务对象的生命周期状态，例如：<br>
+                        • Student: active, suspended, graduated<br>
+                        • Teacher: active, suspended, resigned<br>
+                        • Enrollment: active, dropped, completed<br>
+                        • EnrollmentRequest: pending, approved, rejected
+                    </p>
+                </div>
+                
+                <div class="description-box">
+                    <h4>字符集支持</h4>
+                    <p>
+                        所有表都使用 utf8mb4 字符集和 utf8mb4_unicode_ci 校验集，
+                        完美支持中文、emoji 和其他 Unicode 字符。
+                    </p>
+                </div>
+            </div>
+            
+            <!-- 扩展字段说明 -->
+            <div class="section">
+                <div class="section-title">
+                    <div class="section-icon">➕</div>
+                    <span>可选扩展字段建议</span>
+                </div>
+                
+                <div class="description-box">
+                    <h4>性能监控字段</h4>
+                    <p>
+                        在相关表中添加以支持性能分析：<br>
+                        • 访问计数 (view_count)<br>
+                        • 最后访问时间 (last_accessed_at)<br>
+                        • API调用次数 (api_call_count)
+                    </p>
+                </div>
+                
+                <div class="description-box">
+                    <h4>权限控制字段</h4>
+                    <p>
+                        细粒度权限管理：<br>
+                        • 可见性级别 (visibility_level)<br>
+                        • 共享权限列表 (shared_with)<br>
+                        • 修改权限 (modify_permission)
+                    </p>
+                </div>
+                
+                <div class="description-box">
+                    <h4>国际化支持</h4>
+                    <p>
+                        多语言内容存储：<br>
+                        • 课程描述国际化表 (course_descriptions_i18n)<br>
+                        • 公告国际化表 (announcement_i18n)
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>生成时间：<span id="generateTime"></span></p>
+            <p>数据库类型：MySQL 8.0+ | 字符集：utf8mb4 | 引擎：InnoDB</p>
+        </footer>
+    </div>
+    
+    <script>
+        document.getElementById('generateTime').textContent = new Date().toLocaleString('zh-CN');
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+        mermaid.contentLoaded();
+    </script>
+</body>
+</html>

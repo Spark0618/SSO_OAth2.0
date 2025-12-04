@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>后端服务架构图 - 微服务架构设计</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .section {
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .section-icon {
+            font-size: 1.3em;
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .architecture-diagram {
+            background: #f9f9f9;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 30px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        
+        .architecture-diagram pre {
+            background: white;
+            padding: 20px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            line-height: 1.4;
+            color: #333;
+            overflow-x: auto;
+        }
+        
+        .description-box {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .description-box h4 {
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+        
+        .description-box p, .description-box li {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+        
+        .description-box ul {
+            margin-left: 20px;
+            margin-top: 8px;
+        }
+        
+        .component-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .component-card {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        
+        .component-card:hover {
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+            transform: translateY(-5px);
+        }
+        
+        .component-card h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .component-card p {
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+        
+        .component-features {
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        
+        .component-features li {
+            color: #555;
+            margin-left: 15px;
+            margin-bottom: 5px;
+        }
+        
+        .flow-diagram {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .flow-item {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            gap: 15px;
+        }
+        
+        .flow-number {
+            background: #667eea;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .flow-content {
+            flex-grow: 1;
+        }
+        
+        .flow-content strong {
+            color: #333;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .flow-content p {
+            color: #666;
+            font-size: 0.9em;
+            margin: 0;
+        }
+        
+        .flow-arrow {
+            text-align: center;
+            color: #667eea;
+            font-size: 1.5em;
+            margin: -5px 0;
+        }
+        
+        .layer {
+            background: #f9f9f9;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        
+        .layer-title {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+        
+        .layer-content {
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .feature-box {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .feature-icon {
+            font-size: 2em;
+            margin-bottom: 8px;
+        }
+        
+        .feature-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .feature-desc {
+            color: #666;
+            font-size: 0.85em;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+        
+        .badge-service {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        .badge-middleware {
+            background: #4ecdc4;
+            color: white;
+        }
+        
+        .badge-data {
+            background: #45b7d1;
+            color: white;
+        }
+        
+        .badge-storage {
+            background: #f7b731;
+            color: white;
+        }
+        
+        .badge-cache {
+            background: #5f27cd;
+            color: white;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        footer {
+            background: #f5f5f5;
+            padding: 20px;
+            text-align: center;
+            color: #999;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .constraint {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                border-radius: 0;
+            }
+            
+            header h1 {
+                font-size: 1.8em;
+            }
+            
+            .component-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏛️ 后端服务架构设计</h1>
+            <p>SSO OAuth2.0 学术信息系统 - 微服务架构完整解析</p>
+        </header>
+        
+        <div class="content">
+            <!-- 整体架构 -->
+            <div class="section">
+                <div class="section-title">
+                    <div class="section-icon">🗂️</div>
+                    <span>系统整体架构</span>
+                </div>
+                
+                <div class="description-box">
+                    <h4>架构特点</h4>
+                    <p>
+                        该系统采用微服务架构模式，包括三个独立的Flask应用服务，共享一个MySQL数据库。
+                        通过OAuth2.0实现单点登录(SSO)，支持HTTPS/TLS加密通信。
+                    </p>
+                </div>
+                
+                <div class="architecture-diagram">
+                    <pre>┌──────────────────────────────────────────────────────────────────────┐
+│                          客户端层（前端应用）                              │
+│  ┌─────────────────────┬──────────────────────┬──────────────────────┐  │
+│  │   学术平台前端      │    认证平台前端      │     云盘平台前端     │  │
+│  │  (Academic SPA)     │  (Auth Portal)       │   (Cloud SPA)        │  │
+│  │  Vue.js / React     │  OAuth2.0 Login UI   │   File Manager       │  │
+│  └─────────┬───────────┴──────────┬───────────┴──────────┬───────────┘  │
+│            │                      │                      │               │
+└────────────┼──────────────────────┼──────────────────────┼───────────────┘
+             │                      │                      │
+      ┌──────▼────────┐     ┌──────▼────────┐     ┌──────▼────────┐
+      │ Auth Server   │     │ Academic API  │     │  Cloud API    │
+      │ (5000)        │     │ (5001)        │     │  (5002)       │
+      │               │     │               │     │               │
+      │ • OAuth2.0    │     │ • 课程管理    │     │ • 文件上传    │
+      │ • 用户登录    │     │ • 作业系统    │     │ • 文件下载    │
+      │ • 令牌颁发    │     │ • 成绩管理    │     │ • 文件分享    │
+      │ • 令牌刷新    │     │ • 通知系统    │     │ • 存储管理    │
+      └──────┬────────┘     └──────┬────────┘     └──────┬────────┘
+             │                      │                      │
+             └──────────────────────┼──────────────────────┘
+                    ┌───────────────▼────────────────┐
+                    │     MySQL 共享数据库            │
+                    │  ┌─────────────────────────┐   │
+                    │  │ • 用户/学生/教师信息   │   │
+                    │  │ • 课程/选课/作业记录   │   │
+                    │  │ • 成绩/通知/日志       │   │
+                    │  │ • 资源/配置/元数据     │   │
+                    │  └─────────────────────────┘   │
+                    └────────────────────────────────┘
+                                    │
+                    ┌───────────────┼───────────────┐
+                    │               │               │
+            ┌───────▼────────┐ ┌───▼──────────┐ ┌─▼─────────────┐
+            │  Redis Cache   │ │ Log Storage  │ │ File Storage  │
+            │ (会话、缓存)   │ │  (日志系统)  │ │ (上传文件)    │
+            └────────────────┘ └──────────────┘ └───────────────┘</pre>
+                </div>
+            </div>
+            
+            <!-- 微服务详解 -->
+            <div class="section">
+                <div class="section-title">
+                    <div class="section-icon">📦</div>
+                    <span>三大微服务详解</span>
+                </div>
+                
+                <div class="component-grid">
+                    <div class="component-card">
+                        <h4>🔐 认证服务 (Auth Server)</h4>
+                        <p>OAuth2.0认证授权中心，负责用户身份验证和令牌管理。</p>
+                        <div class="component-features">
+                            <ul>
+                                <li>用户注册和登录</li>
+                                <li>OAuth2.0授权码流实现</li>
+                                <li>JWT令牌颁发</li>
+                                <li>令牌刷新和验证</li>
+                                <li>会话管理</li>
+                                <li>客户端认证</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="component-card">
+                        <h4>🎓 学术系统 (Academic API)</h4>
+                        <p>核心业务系统，处理教学管理的所有功能。</p>
+                        <div class="component-features">
+                            <ul>
+                                <li>课程管理</li>
+                                <li>作业系统</li>
+                                <li>成绩管理</li>
+                                <li>通知推送</li>
+                                <li>数据备份</li>
+                                <li>性能监控</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="component-card">
+                        <h4>☁️ 云存储服务 (Cloud API)</h4>
+                        <p>专业化文件存储和分享服务。</p>
+                        <div class="component-features">
+                            <ul>
+                                <li>文件上传下载</li>
+                                <li>文件列表管理</li>
+                                <li>权限控制</li>
+                                <li>分享链接</li>
+                                <li>存储统计</li>
+                                <li>文件搜索</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 通用层 -->
+            <div class="section">
+                <div class="section-title">
+                    <div class="section-icon">⚙️</div>
+                    <span>通用支撑层 (Common)</span>
+                </div>
+                
+                <div class="description-box">
+                    <h4>设计理念</h4>
+                    <p>
+                        通用层提供所有微服务共享的基础功能，包括配置管理、数据库操作、安全工具等。
+                        采用模块化设计，便于代码复用和维护。
+                    </p>
+                </div>
+                
+                <div class="component-grid">
+                    <div class="component-card">
+                        <h4>🔧 配置管理 (config.py)</h4>
+                        <p>统一的配置中心，支持多应用、多环境配置管理。</p>
+                        <div class="component-features">
+                            <ul>
+                                <li>数据库配置</li>
+                                <li>认证配置</li>
+                                <li>存储配置</li>
+                                <li>CORS配置</li>
+                                <li>环境变量覆盖</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="component-card">
+                        <h4>🗄️ 数据库工具 (database.py)</h4>
+                        <p>SQLAlchemy2.0 ORM封装，提供连接池、会话管理。</p>
+                        <div class="component-features">
+                            <ul>
+                                <li>连接池管理</li>
+                                <li>会话工厂</li>
+                                <li>查询执行</li>
+                                <li>缓存集成</li>
+                                <li>性能统计</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="component-card">
+                        <h4>🔐 安全工具 (security.py)</h4>
+                        <p>JWT、密码哈希、权限检查等安全功能。</p>
+                        <div class="component-features">
+                            <ul>
+                                <li>JWT生成验证</li>
+                                <li>密码哈希(PBKDF2)</li>
+                                <li>RBAC权限检查</li>
+                                <li>API速率限制</li>
+                                <li>输入验证</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="component-card">
+                        <h4>🚀 应用基类 (base_app.py)</h4>
+                        <p>Flask应用基类，统一初始化所有微服务。</p>
+                        <div class="component-features">
+                            <ul>
+                                <li>应用初始化</li>
+                                <li>错误处理</li>
+                                <li>CORS配置</li>
+                                <li>监控集成</li>
+                                <li>优雅关闭</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="component-card">
+                        <h4>📡 API工具 (api_utils.py)</h4>
+                        <p>标准化API响应、分页、缓存等辅助工具。</p>
+                        <div class="component-features">
+                            <ul>
+                                <li>APIResponse类</li>
+                                <li>分页装饰器</li>
+                                <li>缓存装饰器</li>
+                                <li>错误处理</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="component-card">
+                        <h4>📝 日志管理 (logging_config.py)</h4>
+                        <p>统一的日志配置和管理。</p>
+                        <div class="component-features">
+                            <ul>
+                                <li>日志级别配置</li>
+                                <li>日志轮转</li>
+                                <li>日志格式</li>
+                                <li>日志持久化</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 功能模块层 -->
+            <div class="section">
+                <div class="section-title">
+                    <div class="section-icon">✨</div>
+                    <span>增强功能模块层</span>
+                </div>
+                
+                <div class="description-box">
+                    <h4>功能定位</h4>
+                    <p>
+                        这些模块提供特定的业务功能增强，主要用于学术API中，使系统具备更强大的能力。
+                    </p>
+                </div>
+                
+                <div class="layer">
+                    <div class="layer-title">📊 性能与监控</div>
+                    <div class="layer-content">
+                        <strong>performance_monitor.py:</strong> 收集API响应时间、数据库查询性能、缓存命中率等指标，生成性能报告。<br>
+                        <strong>query_optimizer.py:</strong> 分析慢查询，提供优化建议，支持查询缓存策略。
+                    </div>
+                </div>
+                
+                <div class="layer">
+                    <div class="layer-title">💾 数据管理</div>
+                    <div class="layer-content">
+                        <strong>backup_manager.py:</strong> 提供数据库和文件的备份、恢复功能，支持压缩和定时备份。<br>
+                        <strong>cache.py:</strong> 支持内存缓存和Redis分布式缓存的统一接口。<br>
+                        <strong>connection_pool.py:</strong> 数据库连接池高级管理。
+                    </div>
+                </div>
+                
+                <div class="layer">
+                    <div class="layer-title">🔔 通知与消息</div>
+                    <div class="layer-content">
+                        <strong>notifications.py:</strong> 多渠道通知系统(应用内、邮件、短信、WebSocket)，支持优先级和状态追踪。<br>
+                        <strong>notification_routes.py:</strong> 通知相关的API路由。<br>
+                        <strong>websocket_support.py:</strong> WebSocket实时双向通讯支持。
+                    </div>
+                </div>
+                
+                <div class="layer">
+                    <div class="layer-title">✅ 验证与安全</div>
+                    <div class="layer-content">
+                        <strong>validation.py:</strong> 数据验证、输入清理、XSS防护等。<br>
+                        <strong>audit_logger.py:</strong> 操作审计日志系统，记录所有重要操作。<br>
+                        <strong>storage.py & enhanced_storage.py:</strong> 文件存储管理和增强功能。
+                    </div>
+                </div>
+                
+                <div class="layer">
+                    <div class="layer-title">👤 用户管理</div>
+                    <div class="layer-content">
+                        <strong>user_preferences.py:</strong> 用户偏好设置和个人资料管理。<br>
+                        <strong>progress_tracker.py:</strong> 学生学习进度跟踪。<br>
+                        <strong>resource_manager.py:</strong> 课程资源管理。
+                    </div>
+                </div>
+                
+                <div class="layer">
+                    <div class="layer-title">📚 文档与测试</div>
+                    <div class="layer-content">
+                        <strong>api_documentation.py:</strong> 自动生成API文档。<br>
+                        <strong>api_test_generator.py:</strong> 自动生成单元测试用例。<br>
+                        <strong>docs_and_tests.py:</strong> 文档和测试蓝图集成。
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 技术栈 -->
+            <div class="section">
+                <div class="section-title">
+                    <div class="section-icon">🛠️</div>
+                    <span>技术栈与依赖</span>
+                </div>
+                
+                <div class="component-grid">
+                    <div class="component-card">
+                        <h4>🌐 Web框架</h4>
+                        <div class="component-features">
+                            <ul>
+                                <li>Flask 2.0+</li>
+                                <li>Flask-CORS</li>
+                                <li>Flask-SocketIO</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="component-card">
+                        <h4>🗄️ 数据库</h4>
+                        <div class="component-features">
+                            <ul>
+                                <li>MySQL 8.0+</li>
+                                <li>SQLAlchemy 2.0</li>
+                                <li>PyMySQL驱动</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="component-card">
+                        <h4>🔐 认证与安全</h4>
+                        <div class="component-features">
+                            <ul>
+                                <li>JWT (PyJWT)</li>
+                                <li>Werkzeug安全</li>
+                                <li>bcrypt密码</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="component-card">
+                        <h4>💾 缓存与存储</h4>
+                        <div class="component-features">
+                            <ul>
+                                <li>Redis</li>
+                                <li>本地文件存储</li>
+                                <li>内存缓存</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="component-card">
+                        <h4>📊 监控与日志</h4>
+                        <div class="component-features">
+                            <ul>
+                                <li>Python logging</li>
+                                <li>psutil监控</li>
+                                <li>自定义指标</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="component-card">
+                        <h4>🔗 网络通讯</h4>
+                        <div class="component-features">
+                            <ul>
+                                <li>HTTPS/TLS</li>
+                                <li>WebSocket</li>
+                                <li>HTTP 1.1</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 数据流 -->
+            <div class="section">
+                <div class="section-title">
+                    <div class="section-icon">🔄</div>
+                    <span>关键业务流程</span>
+                </div>
+                
+                <div class="description-box">
+                    <h4>用户登录与认证流程</h4>
+                </div>
+                
+                <div class="flow-diagram">
+                    <div class="flow-item">
+                        <div class="flow-number">1</div>
+                        <div class="flow-content">
+                            <strong>用户访问学术平台</strong>
+                            <p>客户端重定向到认证服务器</p>
+                        </div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-item">
+                        <div class="flow-number">2</div>
+                        <div class="flow-content">
+                            <strong>认证服务器显示登录表单</strong>
+                            <p>用户输入用户名和密码</p>
+                        </div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-item">
+                        <div class="flow-number">3</div>
+                        <div class="flow-content">
+                            <strong>验证用户身份</strong>
+                            <p>查询数据库，验证密码哈希</p>
+                        </div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-item">
+                        <div class="flow-number">4</div>
+                        <div class="flow-content">
+                            <strong>生成授权码</strong>
+                            <p>临时授权码存储在内存中</p>
+                        </div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-item">
+                        <div class="flow-number">5</div>
+                        <div class="flow-content">
+                            <strong>重定向回学术平台</strong>
+                            <p>携带授权码参数</p>
+                        </div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-item">
+                        <div class="flow-number">6</div>
+                        <div class="flow-content">
+                            <strong>交换令牌</strong>
+                            <p>学术平台后端用授权码换取JWT令牌</p>
+                        </div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-item">
+                        <div class="flow-number">7</div>
+                        <div class="flow-content">
+                            <strong>保存令牌</strong>
+                            <p>客户端存储JWT令牌（localStorage/cookie）</p>
+                        </div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-item">
+                        <div class="flow-number">8</div>
+                        <div class="flow-content">
+                            <strong>后续请求附带令牌</strong>
+                            <p>Authorization: Bearer &lt;token&gt;</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="description-box" style="margin-top: 30px;">
+                    <h4>作业提交流程</h4>
+                </div>
+                
+                <div class="flow-diagram">
+                    <div class="flow-item">
+                        <div class="flow-number">1</div>
+                        <div class="flow-content">
+                            <strong>教师发布作业</strong>
+                            <p>创建Assignment记录，设置截止时间</p>
+                        </div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-item">
+                        <div class="flow-number">2</div>
+                        <div class="flow-content">
+                            <strong>系统通知学生</strong>
+                            <p>生成Notification记录，可选多渠道推送</p>
+                        </div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-item">
+                        <div class="flow-number">3</div>
+                        <div class="flow-content">
+                            <strong>学生查看作业</strong>
+                            <p>获取Assignment详情，查看资源</p>
+                        </div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-item">
+                        <div class="flow-number">4</div>
+                        <div class="flow-content">
+                            <strong>学生提交作业</strong>
+                            <p>创建AssignmentSubmission，上传SubmissionFile</p>
+                        </div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-item">
+                        <div class="flow-number">5</div>
+                        <div class="flow-content">
+                            <strong>系统记录日志</strong>
+                            <p>审计日志记录提交事件</p>
+                        </div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-item">
+                        <div class="flow-number">6</div>
+                        <div class="flow-content">
+                            <strong>教师批改作业</strong>
+                            <p>更新score和feedback字段</p>
+                        </div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-item">
+                        <div class="flow-number">7</div>
+                        <div class="flow-content">
+                            <strong>推送成绩通知</strong>
+                            <p>生成成绩通知，通知学生</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 部署拓扑 -->
+            <div class="section">
+                <div class="section-title">
+                    <div class="section-icon">🚀</div>
+                    <span>部署拓扑</span>
+                </div>
+                
+                <div class="architecture-diagram">
+                    <pre>开发环境 (开发/测试):
+┌─────────────────────────────────────────────────────────┐
+│                  本地开发机                              │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐   │
+│  │ Auth:5000    │ │Academic:5001 │ │ Cloud:5002   │   │
+│  │ localhost    │ │ localhost    │ │ localhost    │   │
+│  └──────────────┘ └──────────────┘ └──────────────┘   │
+│                        ↓                                 │
+│            ┌──────────────────────────┐                │
+│            │ MySQL (localhost:3306)   │                │
+│            │ Redis (localhost:6379)   │                │
+│            └──────────────────────────┘                │
+└─────────────────────────────────────────────────────────┘
+
+生产环境 (HTTPS/Docker):
+┌──────────────────────────────────────────────────────────────┐
+│                   负载均衡器 (Nginx)                         │
+│              auth.localhost:5000 (HTTPS)                      │
+│            academic.localhost:5001 (HTTPS)                    │
+│              cloud.localhost:5002 (HTTPS)                     │
+└────────────────────────┬─────────────────────────────────────┘
+                         │
+     ┌───────────────────┼───────────────────┐
+     │                   │                   │
+┌────▼────┐         ┌────▼────┐         ┌───▼─────┐
+│ Container│         │Container│         │Container│
+│ Auth    │         │Academic │         │ Cloud   │
+│ (5000)  │         │ (5001)  │         │ (5002)  │
+└────┬────┘         └────┬────┘         └────┬────┘
+     │                   │                    │
+     └───────────────────┼────────────────────┘
+             ┌───────────▼────────────┐
+             │  MySQL Service        │
+             │  (Managed Database)   │
+             └───────────────────────┘
+                      │
+             ┌────────┴────────┐
+             │                 │
+        ┌────▼────┐      ┌────▼────┐
+        │ Redis   │      │ Storage │
+        │ Cache   │      │ Service │
+        └─────────┘      └─────────┘</pre>
+                </div>
+            </div>
+            
+            <!-- API分层 -->
+            <div class="section">
+                <div class="section-title">
+                    <div class="section-icon">📡</div>
+                    <span>API分层设计</span>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>分层</th>
+                            <th>说明</th>
+                            <th>主要职责</th>
+                            <th>文件位置</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="badge badge-service">表现层</span></td>
+                            <td>HTTP路由和请求响应处理</td>
+                            <td>
+                                • 路由定义<br>
+                                • 参数解析<br>
+                                • 响应序列化
+                            </td>
+                            <td>routes.py、app.py</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-middleware">中间层</span></td>
+                            <td>业务逻辑处理</td>
+                            <td>
+                                • 数据验证<br>
+                                • 权限检查<br>
+                                • 业务规则
+                            </td>
+                            <td>validation.py、错误处理</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-data">数据层</span></td>
+                            <td>数据库操作</td>
+                            <td>
+                                • ORM操作<br>
+                                • 查询优化<br>
+                                • 事务管理
+                            </td>
+                            <td>models.py、database.py</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-storage">存储层</span></td>
+                            <td>文件和缓存存储</td>
+                            <td>
+                                • 文件I/O<br>
+                                • 缓存读写<br>
+                                • 内存管理
+                            </td>
+                            <td>storage.py、cache.py</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-cache">外部服务</span></td>
+                            <td>第三方服务集成</td>
+                            <td>
+                                • 邮件发送<br>
+                                • 短信推送<br>
+                                • 文件存储
+                            </td>
+                            <td>notifications.py</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 扩展性 -->
+            <div class="section">
+                <div class="section-title">
+                    <div class="section-icon">📈</div>
+                    <span>系统扩展性设计</span>
+                </div>
+                
+                <div class="description-box">
+                    <h4>水平扩展</h4>
+                    <p>
+                        • 每个微服务可独立扩展，部署多个实例<br>
+                        • 使用负载均衡器(Nginx/HAProxy)分配流量<br>
+                        • 数据库共享，通过连接池管理并发<br>
+                        • Redis集中缓存，支持分布式会话
+                    </p>
+                </div>
+                
+                <div class="description-box">
+                    <h4>垂直扩展</h4>
+                    <p>
+                        • 增加服务器CPU和内存<br>
+                        • 优化数据库索引和查询<br>
+                        • 使用CDN加速静态资源<br>
+                        • 添加读从库支持读写分离
+                    </p>
+                </div>
+                
+                <div class="description-box">
+                    <h4>功能扩展</h4>
+                    <p>
+                        • 新增微服务只需继承BaseApp<br>
+                        • 蓝图模式支持功能模块化<br>
+                        • 装饰器支持功能增强<br>
+                        • 插件系统支持第三方集成
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>生成时间：<span id="generateTime"></span></p>
+            <p>架构模式：微服务 + OAuth2.0 SSO | 通信协议：HTTPS/WebSocket | 数据库：MySQL</p>
+        </footer>
+    </div>
+    
+    <script>
+        document.getElementById('generateTime').textContent = new Date().toLocaleString('zh-CN');
+    </script>
+</body>
+</html>

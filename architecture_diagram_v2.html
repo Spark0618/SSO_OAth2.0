@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学术系统架构与数据库设计</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h1 {
+            font-size: 28px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 15px;
+        }
+        h2 {
+            font-size: 22px;
+            margin-top: 40px;
+        }
+        .diagram-container {
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid #e1e8ed;
+        }
+        .mermaid {
+            font-size: 14px;
+        }
+        .description {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #e8f4fc;
+            border-left: 4px solid #3498db;
+            border-radius: 0 4px 4px 0;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            border: none;
+            border-radius: 5px 5px 0 0;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background-color: #3498db;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>学术系统架构与数据库设计</h1>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="openTab(event, 'architecture')">系统架构图</button>
+            <button class="tab" onclick="openTab(event, 'database')">数据库E-R图</button>
+            <button class="tab" onclick="openTab(event, 'modules')">核心模块说明</button>
+        </div>
+
+        <!-- 系统架构图 -->
+        <div id="architecture" class="tab-content active section">
+            <h2>系统架构图</h2>
+            <div class="diagram-container">
+                <div class="mermaid">
+                    graph TD
+                        subgraph "用户层"
+                            A[用户]
+                        end
+                        
+                        subgraph "前端层"
+                            B[学术前端]
+                            C[认证前端]
+                            D[云存储前端]
+                        end
+                        
+                        subgraph "API网关层"
+                            E[API网关/负载均衡器]
+                        end
+                        
+                        subgraph "微服务层"
+                            F[学术API服务]
+                            G[认证服务]
+                            H[云API服务]
+                        end
+                        
+                        subgraph "公共组件层"
+                            I[安全认证模块]
+                            J[数据库连接池]
+                            K[缓存管理器]
+                            L[日志记录器]
+                            M[性能监控器]
+                        end
+                        
+                        subgraph "数据存储层"
+                            N[(MySQL数据库)]
+                            O[(Redis缓存)]
+                            P[文件存储服务]
+                        end
+                        
+                        A --> B
+                        A --> C
+                        A --> D
+                        
+                        B --> E
+                        C --> E
+                        D --> E
+                        
+                        E --> F
+                        E --> G
+                        E --> H
+                        
+                        F --> I
+                        F --> J
+                        F --> K
+                        F --> L
+                        F --> M
+                        
+                        G --> I
+                        G --> J
+                        G --> L
+                        G --> M
+                        
+                        H --> I
+                        H --> J
+                        H --> L
+                        H --> M
+                        
+                        J --> N
+                        K --> O
+                        F --> P
+                        H --> P
+                </div>
+            </div>
+            
+            <div class="description">
+                <h3>架构说明</h3>
+                <p>系统采用分层微服务架构，主要包含以下层次：</p>
+                <ul>
+                    <li><strong>用户层</strong>：系统的终端用户，包括学生、教师和管理员</li>
+                    <li><strong>前端层</strong>：提供不同功能的用户界面，分别针对学术功能、认证管理和云存储服务</li>
+                    <li><strong>API网关层</strong>：统一入口点，负责请求路由、负载均衡和访问控制</li>
+                    <li><strong>微服务层</strong>：核心业务逻辑，分为三个独立服务</li>
+                    <li><strong>公共组件层</strong>：提供各服务共享的基础功能</li>
+                    <li><strong>数据存储层</strong>：持久化存储和缓存系统</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 数据库E-R图 -->
+        <div id="database" class="tab-content section">
+            <h2>数据库E-R图</h2>
+            <div class="diagram-container">
+                <div class="mermaid">
+                    erDiagram
+                        USERS {
+                            int id PK
+                            string username UK
+                            string password_hash
+                            string role
+                            string email
+                            datetime created_at
+                        }
+                        
+                        STUDENTS {
+                            int id PK
+                            int user_id FK
+                            string student_no UK
+                            string name
+                            string major
+                            string grade
+                        }
+                        
+                        TEACHERS {
+                            int id PK
+                            int user_id FK
+                            string teacher_no UK
+                            string name
+                            string department
+                            string title
+                        }
+                        
+                        COURSES {
+                            int id PK
+                            string code UK
+                            string title
+                            int teacher_id FK
+                            int credits
+                            string semester
+                            int year
+                        }
+                        
+                        ENROLLMENTS {
+                            int id PK
+                            int student_id FK
+                            int course_id FK
+                            string grade
+                            datetime enrolled_at
+                        }
+                        
+                        ANNOUNCEMENTS {
+                            int id PK
+                            string title
+                            text content
+                            int teacher_id FK
+                            datetime created_at
+                        }
+                        
+                        ASSIGNMENTS {
+                            int id PK
+                            string title
+                            int course_id FK
+                            datetime due_date
+                        }
+                        
+                        SUBMISSIONS {
+                            int id PK
+                            int assignment_id FK
+                            int student_id FK
+                            float score
+                            datetime submitted_at
+                        }
+                        
+                        USERS ||--o| STUDENTS : has
+                        USERS ||--o| TEACHERS : has
+                        TEACHERS ||--o{ COURSES : teaches
+                        STUDENTS ||--o{ ENROLLMENTS : enrolls
+                        COURSES ||--o{ ENROLLMENTS : has
+                        TEACHERS ||--o{ ANNOUNCEMENTS : creates
+                        COURSES ||--o{ ASSIGNMENTS : has
+                        STUDENTS ||--o{ SUBMISSIONS : submits
+                        ASSIGNMENTS ||--o{ SUBMISSIONS : receives
+                </div>
+            </div>
+            
+            <div class="description">
+                <h3>数据库设计说明</h3>
+                <p>数据库采用关系模型，包含以下核心实体：</p>
+                <ul>
+                    <li><strong>用户管理</strong>：USERS表记录基本用户信息，通过STUDENTS和TEACHERS表扩展不同角色的详细信息</li>
+                    <li><strong>课程管理</strong>：COURSES表定义课程信息，ENROLLMENTS表管理学生选课关系</li>
+                    <li><strong>教学互动</strong>：ANNOUNCEMENTS表用于课程公告，ASSIGNMENTS表管理作业</li>
+                    <li><strong>成绩管理</strong>：通过SUBMISSIONS表记录作业提交和成绩信息</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 核心模块说明 -->
+        <div id="modules" class="tab-content section">
+            <h2>核心模块说明</h2>
+            <div class="description">
+                <h3>微服务核心模块</h3>
+                <ul>
+                    <li><strong>学术API服务</strong>：处理课程管理、成绩记录、教学资源等核心学术功能</li>
+                    <li><strong>认证服务</strong>：提供用户登录、注册、权限管理等身份验证功能</li>
+                    <li><strong>云API服务</strong>：管理文件存储、资源共享和数据备份等云服务功能</li>
+                </ul>
+            </div>
+            
+            <div class="description">
+                <h3>公共基础模块</h3>
+                <ul>
+                    <li><strong>安全认证模块</strong>：实现JWT令牌、密码加密、权限验证等安全机制</li>
+                    <li><strong>数据库连接池</strong>：优化数据库连接管理，提高性能和稳定性</li>
+                    <li><strong>缓存管理器</strong>：提供Redis缓存支持，减少数据库访问压力</li>
+                    <li><strong>日志记录器</strong>：统一的日志管理，支持多级日志和日志轮转</li>
+                    <li><strong>性能监控器</strong>：实时监控系统性能指标，预警潜在问题</li>
+                </ul>
+            </div>
+            
+            <div class="description">
+                <h3>业务扩展模块</h3>
+                <ul>
+                    <li><strong>通知系统</strong>：支持站内消息、邮件通知等多种通知方式</li>
+                    <li><strong>资源管理</strong>：课程资料的上传、分类和检索功能</li>
+                    <li><strong>进度跟踪</strong>：记录和分析学习进度，生成学习报告</li>
+                    <li><strong>备份恢复</strong>：自动定期数据备份和灾难恢复功能</li>
+                    <li><strong>审计日志</strong>：记录关键操作，确保系统安全性和可追溯性</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化Mermaid
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+            flowchart: {
+                curve: 'linear'
+            },
+            er: {
+                diagramPadding: 20,
+                layoutDirection: 'TB'
+            }
+        });
+        
+        // 标签页切换
+        function openTab(evt, tabName) {
+            // 获取所有标签内容
+            var tabcontent = document.getElementsByClassName("tab-content");
+            for (var i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].className = tabcontent[i].className.replace(" active", "");
+            }
+            
+            // 获取所有标签按钮
+            var tablinks = document.getElementsByClassName("tab");
+            for (var i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            
+            // 显示当前标签内容并高亮按钮
+            document.getElementById(tabName).className += " active";
+            evt.currentTarget.className += " active";
+            
+            // 重新渲染Mermaid图表
+            mermaid.init();
+        }
+    </script>
+</body>
+</html>

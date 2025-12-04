@@ -11,7 +11,7 @@ from urllib.parse import quote_plus
 
 import jwt
 from flask import Flask, jsonify, request, send_file, redirect
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey, Text, text as sa_text
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -115,7 +115,19 @@ def init_db():
     # 1. 自动建表 (如果表不存在)
     # 这会创建 users, certificates, oauth_clients 三张表
     Base.metadata.create_all(bind=engine)
-    
+
+    # 兼容旧版数据库：role 字段可能没有 admin 枚举，导致插入失败
+    if engine.dialect.name.startswith("mysql"):
+        with engine.begin() as conn:
+            try:
+                conn.execute(sa_text(
+                    "ALTER TABLE users MODIFY COLUMN role ENUM('student','teacher','admin') NOT NULL"
+                ))
+                print("[db_init] 已更新 users.role 枚举以支持 admin")
+            except Exception as e:
+                # 如果已经是最新结构或数据库不支持该语句，则忽略
+                print(f"[db_init] role 枚举检查: {e}")
+
     session = SessionLocal()
     try:
         # ==================== 初始化 OAuth 客户端 ====================

@@ -3,6 +3,7 @@ import time
 import urllib.parse
 
 import requests
+import jwt
 from flask import Flask, jsonify, request
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
@@ -283,11 +284,18 @@ def _exchange_code(code):
     if resp.status_code != 200:
         return None, resp.json()
     data = resp.json()
+    fp = None
+    try:
+        token_payload = jwt.decode(data["access_token"], options={"verify_signature": False})
+        fp = token_payload.get("fp")
+    except Exception:
+        fp = None
     return {
         "access_token": data["access_token"],
         "refresh_token": data["refresh_token"],
         "exp": int(time.time()) + data.get("expires_in", 300),
         "username": data.get("username"),
+        "fingerprint": fp,
     }, None
 
 
@@ -383,10 +391,17 @@ def _refresh(refresh_token):
     if resp.status_code != 200:
         return None
     data = resp.json()
+    fp = None
+    try:
+        token_payload = jwt.decode(data["access_token"], options={"verify_signature": False})
+        fp = token_payload.get("fp")
+    except Exception:
+        fp = None
     return {
         "access_token": data["access_token"],
         "refresh_token": data["refresh_token"],
         "exp": int(time.time()) + data.get("expires_in", 300),
+        "fingerprint": fp,
     }
 
 
@@ -403,7 +418,7 @@ def _validate_token():
         sess.update(refreshed)
         SESSIONS[session_id] = sess
     headers = {"Authorization": f"Bearer {sess['access_token']}"}
-    fp = request.headers.get("X-Client-Cert-Fingerprint")
+    fp = request.headers.get("X-Client-Cert-Fingerprint") or sess.get("fingerprint")
     if fp:
         headers["X-Client-Cert-Fingerprint"] = fp
     try:

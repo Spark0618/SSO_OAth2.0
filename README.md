@@ -74,6 +74,24 @@ OAuth2.0 & SSO 流程（前端不持有访问令牌）
 ---------------
 - **单向认证**：前端需信任 `ca.crt`，通过 HTTPS 连接各站点，浏览器验证服务器证书链。
 - **双向认证**：使用 `create_client.sh <user>` 为用户签发证书，导入浏览器/curl。由反向代理启用 `ssl_verify_client on;` 等配置，验证通过后把客户端证书（或 SHA256 指纹）转发给后端。后端会在登录/令牌验证时比对与用户绑定的指纹。
+前端启动命令改为
+```
+# 教务前端
+cd frontends/academic && python ../https_server.py --ssl-cert ../../certs/academic-api.crt --ssl-key ../../certs/academic-api.key --port 4174
+# 云盘前端
+cd frontends/cloud && python ../https_server.py --ssl-cert ../../certs/cloud-api.crt --ssl-key ../../certs/cloud-api.key --port 4176
+# 认证门户
+cd frontends/auth && python ../https_server.py --ssl-cert ../../certs/auth-server.crt --ssl-key ../../certs/auth-server.key --port 4173
+```
+认证门户的后端启动命令改为
+```
+FLASK_APP=auth-server/app.py python -m flask run --cert=certs/auth-server.crt --key=certs/auth-server.key -p 5003
+```
+然后关键的一步是使用https_sever在原来的认证后端端口（5000端口）充当 mTLS 终止 + 反代
+```
+cd frontends/auth && python ../https_server.py --ssl-cert ../../certs/auth-server.crt --ssl-key ../../certs/auth-server.key --client-ca ../../certs/ca.crt --require-client-cert  --upstream https://auth.localhost:5003 --proxy-prefix / --insecure-upstream --port 5000
+```
+最后修改academic-api和cloud-api的AUTH_SERVER端口为5003，使后端能直连auth-server
 - **密钥协商**：使用 TLS 默认握手（ECDHE），脚本使用 OpenSSL 生成的证书+密钥。可用 `openssl s_client -connect localhost:5000` 观测握手。
 
 接口概览

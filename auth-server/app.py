@@ -182,7 +182,15 @@ def init_db():
 # 登陆
 @app.route("/auth/login", methods=["POST"])
 def login():
-    data = request.get_json() or {}
+    # 允许 JSON 或表单编码，避免浏览器预检触发问题；只在 is_json 时解析 JSON，防止 415
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+    else:
+        data = request.form.to_dict() or {}
+        if not data and request.data:
+            # 兜底解析 x-www-form-urlencoded 文本
+            from urllib.parse import parse_qs
+            data = {k: v[0] for k, v in parse_qs(request.data.decode("utf-8")).items()}
     username = data.get("username")
     password = data.get("password")
     
@@ -214,8 +222,8 @@ def login():
             # 指纹存在但数据库没记录（可能是未登记的证书），根据策略可以选择放行或拦截
             # 这里为了演示简单，如果没找到证书记录，暂时放行（弱校验）
             # 实际工程中，应该选择白名单策略
-            # session.close()
-            # return jsonify({"error": "Unknown certificate! Please register first."}), 403
+            session.close()
+            return jsonify({"error": "Unknown certificate! Please register first."}), 403
             pass
 
     session.close()
@@ -461,7 +469,14 @@ def approve_consent():
     session_data = SESSIONS.get(session_token)
     if not session_data: return jsonify({"error": "Unauthorized"}), 401
     
-    data = request.get_json() or {}
+    # 允许 JSON 或表单编码，避免预检后的主请求因 Content-Type 触发 415
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+    else:
+        data = request.form.to_dict() or {}
+        if not data and request.data:
+            from urllib.parse import parse_qs
+            data = {k: v[0] for k, v in parse_qs(request.data.decode("utf-8")).items()}
     
     # 2. 获取参数 (前端传回来的)
     client_id = data.get("client_id")

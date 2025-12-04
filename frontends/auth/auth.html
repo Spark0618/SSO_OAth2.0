@@ -765,10 +765,9 @@ curl -v --cert certs/alice.crt --key certs/alice.key https://localhost:5000/heal
                             method: "POST",
                             credentials: "include",
                             headers: { 
-                                "Content-Type": "application/json",
-                                "Accept": "application/json"
+                                "Content-Type": "application/x-www-form-urlencoded"
                             },
-                            body: JSON.stringify({ 
+                            body: new URLSearchParams({ 
                                 username: this.loginUsername.trim(), 
                                 password: this.loginPassword.trim() 
                             }),

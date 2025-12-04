@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>OAuth2.0 单点登录 (SSO) API 设计</title>
+  <style>
+    body { font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; margin: 32px; line-height: 1.5; color: #1f2937; }
+    h1, h2, h3 { color: #111827; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0 24px; }
+    th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: #f9fafb; }
+    .tag { display: inline-block; padding: 1px 6px; margin-right: 6px; border-radius: 6px; font-size: 12px; background: #eef2ff; color: #3730a3; }
+  </style>
+</head>
+<body>
+  <h1>OAuth2.0 单点登录流程接口设计</h1>
+  <p>依据仓库现有实现梳理三类站点的 API：统一认证 (Auth Server)、教务资源服务器 (Academic API)、云盘资源服务器 (Cloud API)。所有接口均为 HTTPS，示例基地址：</p>
+  <ul>
+    <li>认证服务器：<code>https://auth.localhost:5000</code></li>
+    <li>教务 API：<code>https://academic.localhost:5001</code></li>
+    <li>云盘 API：<code>https://cloud.localhost:5002</code></li>
+  </ul>
+  <p>前端不持有访问令牌，业务站点以自身 HttpOnly 会话 Cookie（<code>academic_session</code> / <code>cloud_session</code>）维持登录，后端在每次请求时向认证服务器校验 Bearer Token。</p>
+
+  <h2>整体授权码 + SSO 流程</h2>
+  <ol>
+    <li>用户在认证门户登录：<code>POST /auth/login</code>，获得 <code>sso_session</code> Cookie。</li>
+    <li>业务站点引导用户跳转：<code>GET /session/login</code> &rarr; 302 到 <code>/auth/authorize</code>；未登录会被带 <code>next</code> 回认证门户。</li>
+    <li>认证站点校验客户端信息，跳转到 <code>consent.html</code>；用户确认后前端调用 <code>POST /auth/approve</code> 颁发授权码。</li>
+    <li>认证站点回调业务后端 <code>/session/callback?code=...</code>；业务后端用授权码调用 <code>POST /auth/token</code> 换取 access/refresh token，写入自身会话 Cookie。</li>
+    <li>业务后端访问受保护资源时附带 Bearer Token；认证站点 <code>/auth/validate</code> 校验签名、过期时间、可选双向 TLS 指纹。</li>
+    <li>access token 过期后业务后端用 refresh token 调用 <code>grant_type=refresh_token</code> 静默续期。</li>
+  </ol>
+  <p>通用请求头：可选 <code>X-Client-Cert-Fingerprint</code> 用于绑定/校验客户端证书指纹（双向 TLS 演示）。</p>
+
+  <h2>统一认证服务器 (auth-server)</h2>
+  <table>
+    <tr>
+      <th>接口</th><th>方法</th><th>用途</th><th>请求</th><th>响应/备注</th>
+    </tr>
+    <tr>
+      <td><code>/auth/register</code></td>
+      <td>POST</td>
+      <td>注册用户</td>
+      <td>JSON <code>{username, password, role?}</code></td>
+      <td>201: <code>{message}</code>；409: 用户存在</td>
+    </tr>
+    <tr>
+      <td><code>/auth/login</code></td>
+      <td>POST</td>
+      <td>用户名+密码登录，生成 SSO 会话</td>
+      <td>JSON <code>{username, password}</code>；可带 <code>X-Client-Cert-Fingerprint</code></td>
+      <td>200: <code>{session_token, username, role}</code> 并设置 HttpOnly <code>sso_session</code> (SameSite=None; Secure)</td>
+    </tr>
+    <tr>
+      <td><code>/auth/logout</code></td>
+      <td>POST</td>
+      <td>登出并清除 <code>sso_session</code></td>
+      <td>Cookie: <code>sso_session</code></td>
+      <td>200: <code>{message}</code>，同时删除 Cookie</td>
+    </tr>
+    <tr>
+      <td><code>/auth/session</code></td>
+      <td>GET</td>
+      <td>查询 SSO 会话状态</td>
+      <td>Cookie: <code>sso_session</code></td>
+      <td>200: <code>{active, username, role}</code> 或 401</td>
+    </tr>
+    <tr>
+      <td><code>/auth/authorize</code></td>
+      <td>GET</td>
+      <td>OAuth 授权端点，校验登录与客户端并跳转到授权确认页</td>
+      <td>Query: <code>response_type=code</code>，<code>client_id</code>，<code>redirect_uri</code>，<code>state?</code>; Cookie: <code>sso_session</code> 或 Header <code>X-Session-Token</code></td>
+      <td>未登录 302 到 <code>auth.html?next=...</code>；已登录 302 到 <code>consent.html</code> 携带客户端信息</td>
+    </tr>
+    <tr>
+      <td><code>/auth/approve</code></td>
+      <td>POST</td>
+      <td>用户在确认页同意授权，颁发授权码</td>
+      <td>JSON <code>{client_id, redirect_uri, state?, allow}</code>; Cookie: <code>sso_session</code></td>
+      <td>200: <code>{redirect}</code>，前端按该 URL 跳转（<code>redirect_uri?code=...&state=...</code>）</td>
+    </tr>
+    <tr>
+      <td><code>/auth/token</code></td>
+      <td>POST</td>
+      <td>换取访问令牌或刷新令牌</td>
+      <td>JSON：<br/>- 授权码：<code>{grant_type:\"authorization_code\", code, client_id, client_secret}</code><br/>- 刷新：<code>{grant_type:\"refresh_token\", refresh_token, client_id, client_secret}</code></td>
+      <td>200: <code>{access_token, refresh_token, expires_in, username, role, scope}</code>；错误返回 4xx</td>
+    </tr>
+    <tr>
+      <td><code>/auth/validate</code></td>
+      <td>POST</td>
+      <td>校验 access token（可校验证书指纹、撤销状态）</td>
+      <td>Header: <code>Authorization: Bearer &lt;token&gt;</code>；可带 <code>X-Client-Cert-Fingerprint</code></td>
+      <td>200: <code>{active:true, username, client_id, scope, role}</code>；401: token 无效/指纹不匹配/证书撤销</td>
+    </tr>
+    <tr>
+      <td><code>/ca/issue</code></td>
+      <td>POST</td>
+      <td>登录后为当前用户签发客户端证书（演示用）</td>
+      <td>Cookie: <code>sso_session</code></td>
+      <td>返回 <code>.p12</code> 文件；同时记录证书指纹、序列号</td>
+    </tr>
+    <tr>
+      <td><code>/certs</code></td>
+      <td>GET</td>
+      <td>查看当前用户有效证书列表</td>
+      <td>Cookie: <code>sso_session</code></td>
+      <td>200: <code>[{id, name, serial, fingerprint, status, issued_at}]</code></td>
+    </tr>
+    <tr>
+      <td><code>/api/cert/revoke</code></td>
+      <td>POST</td>
+      <td>撤销当前用户的证书</td>
+      <td>JSON <code>{id}</code>；Cookie: <code>sso_session</code></td>
+      <td>200: <code>{message}</code>；404: 未找到</td>
+    </tr>
+    <tr>
+      <td><code>/health</code></td>
+      <td>GET</td>
+      <td>存活探针</td>
+      <td>-</td>
+      <td><code>{status:"ok"}</code></td>
+    </tr>
+  </table>
+
+  <h2>应用站点</h2>
+  <p>后端持有 <code>CLIENT_ID=academic-app或cloud-app</code>/<code>CLIENT_SECRET</code>，通过 <code>academic_session/cloud_session</code> 维持登录。所有受保护接口先通过 <code>/auth/validate</code> 校验 access token（必要时自动刷新）。</p>
+  <table>
+    <tr><th>接口</th><th>方法</th><th>用途</th><th>请求</th><th>响应/备注</th></tr>
+    <tr>
+      <td><code>/session/login</code></td>
+      <td>GET</td>
+      <td>跳转到认证门户触发 OAuth 登录</td>
+      <td>-</td>
+      <td>302 到 <code>auth.html?next=/auth/authorize...</code></td>
+    </tr>
+    <tr>
+      <td><code>/session/callback</code></td>
+      <td>GET</td>
+      <td>授权码回调，兑换 token，写入 <code>academic_session/cloud_session</code></td>
+      <td>Query: <code>code</code>, <code>state</code></td>
+      <td>302 回前端；Cookie <code>academic_session/cloud_session</code></td>
+    </tr>
+    <tr>
+      <td><code>/session/status</code></td>
+      <td>GET</td>
+      <td>查看登录状态（含用户名/角色）</td>
+      <td>Cookie: <code>academic_session/cloud_session</code></td>
+      <td>200: <code>{logged_in, username, role, login_at}</code>；401 未登录/令牌无效</td>
+    </tr>
+    <tr>
+      <td><code>/session/logout</code></td>
+      <td>POST</td>
+      <td>登出教务站点</td>
+      <td>Cookie: <code>academic_session/cloud_session</code></td>
+      <td>200 清除 Cookie</td>
+    </tr>
+    <tr>
+      <td><code>/health</code></td>
+      <td>GET</td>
+      <td>存活探针</td>
+      <td>-</td>
+      <td><code>{status:"academic-api ok"}</code></td>
+    </tr>
+  </table>
+
+  <h2>教务资源服务器 (academic-api)</h2>
+  <p>后端持有 <code>CLIENT_ID=academic-app</code>/<code>CLIENT_SECRET</code>，通过 <code>academic_session</code> 维持登录。所有受保护接口先通过 <code>/auth/validate</code> 校验 access token（必要时自动刷新）。</p>
+  <table>
+    <tr><th>接口</th><th>方法</th><th>用途</th><th>请求</th><th>响应/备注</th></tr>
+    <tr>
+      <td><code>/session/login</code></td>
+      <td>GET</td>
+      <td>跳转到认证门户触发 OAuth 登录</td>
+      <td>-</td>
+      <td>302 到 <code>auth.html?next=/auth/authorize...</code></td>
+    </tr>
+    <tr>
+      <td><code>/session/callback</code></td>
+      <td>GET</td>
+      <td>授权码回调，兑换 token，写入 <code>academic_session</code></td>
+      <td>Query: <code>code</code>, <code>state</code></td>
+      <td>302 回前端；Cookie <code>academic_session</code></td>
+    </tr>
+    <tr>
+      <td><code>/session/status</code></td>
+      <td>GET</td>
+      <td>查看登录状态（含用户名/角色）</td>
+      <td>Cookie: <code>academic_session</code></td>
+      <td>200: <code>{logged_in, username, role, login_at}</code>；401 未登录/令牌无效</td>
+    </tr>
+    <tr>
+      <td><code>/session/logout</code></td>
+      <td>POST</td>
+      <td>登出教务站点</td>
+      <td>Cookie: <code>academic_session</code></td>
+      <td>200 清除 Cookie</td>
+    </tr>
+    <tr>
+      <td><code>/courses</code></td>
+      <td>GET</td>
+      <td>获取课程列表（学生：选课；教师：授课）</td>
+      <td>Cookie: <code>academic_session</code></td>
+      <td><code>{user, courses:[{code,title,desc,day,slot,location}]}</code></td>
+    </tr>
+    <tr>
+      <td><code>/grades</code></td>
+      <td>GET</td>
+      <td>获取成绩（学生）或授课提示（教师）</td>
+      <td>Cookie: <code>academic_session</code></td>
+      <td><code>{user, grades:{course_code: grade}}</code></td>
+    </tr>
+    <tr>
+      <td><code>/profile</code></td>
+      <td>GET</td>
+      <td>获取个人档案（学生/教师）</td>
+      <td>Cookie: <code>academic_session</code></td>
+      <td><code>{user, profile:{personal,enrollment}}</code></td>
+    </tr>
+    <tr>
+      <td><code>/profile</code></td>
+      <td>PUT</td>
+      <td>更新个人档案</td>
+      <td>JSON 字段依据角色（学生：<code>name, student_id, gender, hometown, grade, college, major</code>；教师：<code>name, student_id, title, department</code>）</td>
+      <td>200: <code>{message}</code></td>
+    </tr>
+    <tr>
+      <td><code>/profile/password</code></td>
+      <td>POST</td>
+      <td>修改密码</td>
+      <td>JSON <code>{old_password, new_password}</code></td>
+      <td>200: <code>{message}</code>；400: 旧密码错误</td>
+    </tr>
+    <tr>
+      <td><code>/courses/manage</code></td>
+      <td>GET / POST</td>
+      <td>教师课程管理：查看/创建课程</td>
+      <td>GET: Cookie；POST JSON <code>{code, title, desc?}</code></td>
+      <td>403 非教师拒绝；POST 201: <code>{message, code}</code></td>
+    </tr>
+    <tr>
+      <td><code>/courses/&lt;code&gt;/students</code></td>
+      <td>GET / POST / DELETE</td>
+      <td>教师查看/增删选课学生</td>
+      <td>GET: Cookie；POST/DELETE JSON <code>{student_no}</code></td>
+      <td>200: <code>{students}</code> 或 <code>{message}</code>；404: 课程或学生不存在</td>
+    </tr>
+    <tr>
+      <td><code>/courses/&lt;code&gt;/grade</code></td>
+      <td>POST</td>
+      <td>教师录入/更新成绩</td>
+      <td>JSON <code>{student_no, grade}</code></td>
+      <td>200: <code>{message}</code></td>
+    </tr>
+    <tr>
+      <td><code>/courses/&lt;code&gt;/schedule</code></td>
+      <td>POST</td>
+      <td>教师更新课程时间地点</td>
+      <td>JSON <code>{day (1-7), slot (1-12), location?}</code></td>
+      <td>200: <code>{message, code, day, slot, location}</code></td>
+    </tr>
+    <tr>
+      <td><code>/students</code></td>
+      <td>GET</td>
+      <td>教师查询学生名单（可模糊搜索）</td>
+      <td>Query <code>q?</code>；Cookie</td>
+      <td><code>{students:[...]}</code></td>
+    </tr>
+    <tr>
+      <td><code>/health</code></td>
+      <td>GET</td>
+      <td>存活探针</td>
+      <td>-</td>
+      <td><code>{status:"academic-api ok"}</code></td>
+    </tr>
+  </table>
+
+  <h2>云盘资源服务器 (cloud-api)</h2>
+  <p>后端持有 <code>CLIENT_ID=cloud-app</code>/<code>CLIENT_SECRET</code>，通过 <code>cloud_session</code> 维持登录，令牌校验逻辑与教务站点相同。</p>
+  <table>
+    <tr><th>接口</th><th>方法</th><th>用途</th><th>请求</th><th>响应/备注</th></tr>
+    <tr>
+      <td><code>/session/login</code></td>
+      <td>GET</td>
+      <td>跳转到认证门户触发 OAuth 登录</td>
+      <td>-</td>
+      <td>302 到 <code>/auth/authorize</code></td>
+    </tr>
+    <tr>
+      <td><code>/session/callback</code></td>
+      <td>GET</td>
+      <td>授权码回调，兑换 token，写入 <code>cloud_session</code></td>
+      <td>Query: <code>code</code></td>
+      <td>302 回前端；Cookie <code>cloud_session</code></td>
+    </tr>
+    <tr>
+      <td><code>/session/status</code></td>
+      <td>GET</td>
+      <td>查看云盘登录状态</td>
+      <td>Cookie: <code>cloud_session</code></td>
+      <td>200: <code>{logged_in:true}</code>；401 未登录</td>
+    </tr>
+    <tr>
+      <td><code>/session/logout</code></td>
+      <td>POST</td>
+      <td>登出云盘</td>
+      <td>Cookie: <code>cloud_session</code></td>
+      <td>200 清除 Cookie</td>
+    </tr>
+    <tr>
+      <td><code>/files</code></td>
+      <td>GET</td>
+      <td>列出当前用户的文件（含模拟与真实上传）</td>
+      <td>Cookie: <code>cloud_session</code></td>
+      <td><code>{user, files:[{id,name,size,uploaded_at,owner,encrypted,share_token,...}]}</code></td>
+    </tr>
+    <tr>
+      <td><code>/files</code></td>
+      <td>POST</td>
+      <td>模拟上传：仅记录元数据</td>
+      <td>JSON <code>{name?, size?}</code></td>
+      <td>201: <code>{message, files, user}</code></td>
+    </tr>
+    <tr>
+      <td><code>/files/upload</code></td>
+      <td>POST</td>
+      <td>真实文件上传 (multipart/form-data)</td>
+      <td>Form file 字段名 <code>file</code></td>
+      <td>201: <code>{message, files, user}</code></td>
+    </tr>
+    <tr>
+      <td><code>/files/download/&lt;file_id&gt;</code></td>
+      <td>GET</td>
+      <td>下载本人上传的真实文件</td>
+      <td>Path: <code>file_id</code>; Cookie</td>
+      <td>成功返回文件流；404/400/410 见实际逻辑</td>
+    </tr>
+    <tr>
+      <td><code>/files/share</code></td>
+      <td>POST</td>
+      <td>为自己的文件生成分享链接</td>
+      <td>JSON <code>{file_id, expire_hours?, password?}</code></td>
+      <td>200: <code>{share_token, share_page_url, direct_download_url, expires_at, need_password}</code></td>
+    </tr>
+    <tr>
+      <td><code>/share/&lt;token&gt;</code></td>
+      <td>GET</td>
+      <td>匿名访问分享，校验过期与密码</td>
+      <td>Query <code>password?</code></td>
+      <td>200: 文件公共信息；403 密码错误；404/410 分享失效</td>
+    </tr>
+    <tr>
+      <td><code>/share/&lt;token&gt;/download</code></td>
+      <td>GET</td>
+      <td>匿名直链下载分享的真实文件</td>
+      <td>Query <code>password?</code>（如设置）</td>
+      <td>成功返回文件流；错误码同分享校验</td>
+    </tr>
+    <tr>
+      <td><code>/debug/shares</code></td>
+      <td>GET</td>
+      <td>调试：查看分享状态</td>
+      <td>-</td>
+      <td>返回当前 SHARES 信息</td>
+    </tr>
+    <tr>
+      <td><code>/debug/files</code></td>
+      <td>GET</td>
+      <td>调试：查看文件记录</td>
+      <td>-</td>
+      <td>返回当前 FILES 信息（不含存储路径）</td>
+    </tr>
+    <tr>
+      <td><code>/health</code></td>
+      <td>GET</td>
+      <td>存活探针</td>
+      <td>-</td>
+      <td><code>{status:"cloud-api ok"}</code></td>
+    </tr>
+  </table>
+
+  <h3>调用注意事项</h3>
+  <ul>
+    <li>跨站请求需携带 <code>credentials: include</code> 以便 Cookie 生效。</li>
+    <li>演示环境的证书与指纹校验通过 <code>X-Client-Cert-Fingerprint</code> 传递，实际部署应由反向代理传递客户端证书信息。</li>
+    <li>access token 短时效（默认 300s），业务后端应在过期时自动触发 refresh 流程，不将令牌暴露给浏览器。</li>
+  </ul>
+</body>
+</html>

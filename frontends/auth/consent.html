@@ -77,13 +77,13 @@
             // 2. 发送 POST 请求确认授权
             const res = await fetch(`${this.base}/auth/approve`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
               credentials: "include",
-              body: JSON.stringify({
+              body: new URLSearchParams({
                 client_id: this.params.client_id,
                 redirect_uri: this.params.redirect_uri,
                 state: this.params.state,
-                allow: true
+                allow: "true"
               })
             });
             const data = await res.json();

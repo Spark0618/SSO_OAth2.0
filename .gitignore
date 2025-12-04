@@ -12,3 +12,4 @@ venv/
 uploads/
 logs/
 merge_*.py
+test*.py

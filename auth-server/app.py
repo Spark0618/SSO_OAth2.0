@@ -152,7 +152,8 @@ def init_db():
         default_users = [
             {"username": "alice", "role": "student"},
             {"username": "bob", "role": "student"},
-            {"username": "teacher", "role": "teacher"}
+            {"username": "teacher", "role": "teacher"},
+            {"username": "admin", "role": "admin"}
         ]
 
         for u_data in default_users:
@@ -609,6 +610,198 @@ def session_status():
     session = SESSIONS.get(session_token)
     if not session: return jsonify({"active": False}), 401
     return jsonify({"active": True, "username": session["username"], "role": session.get("role")})
+
+# ================= Admin 接口 =================
+
+# 检查admin权限
+def _check_admin():
+    """辅助函数：检查当前请求是否来自管理员"""
+    session_token = request.cookies.get("sso_session")
+    # 兼容请求头携带 token 的情况（方便 Postman 测试）
+    if not session_token:
+        session_token = request.headers.get("X-Session-Token")
+        
+    session_data = SESSIONS.get(session_token)
+    if not session_data:
+        return False, jsonify({"error": "Unauthorized"}), 401
+    
+    if session_data.get("role") != "admin":
+        return False, jsonify({"error": "Forbidden: Admin access required"}), 403
+        
+    return True, None, None
+
+# 查看在线用户
+@app.route("/admin/sessions", methods=["GET"])
+def list_all_sessions():
+    """列出所有在线会话"""
+    is_admin, err_resp, status_code = _check_admin()
+    if not is_admin:
+        return err_resp, status_code
+
+    active_sessions = []
+    now = time.time()
+    
+    # 遍历内存中的 SESSIONS
+    for token, data in SESSIONS.items():
+        # 计算剩余有效期 (Refresh Token 的过期时间)
+        # 注意：这里我们简单展示 refresh token 的有效期作为会话剩余时间
+        # 实际 SESSIONS 结构中存储的是 Access Token 相关数据，
+        # 我们之前的代码在 token() 中存入 REFRESH_TOKENS，在 SESSIONS 中存的是 payload
+        # 这里为了演示，我们直接展示 SESSIONS 里的数据
+        
+        # 简单的格式化时间
+        issued_at = datetime.fromtimestamp(data.get("issued_at", now)).strftime('%Y-%m-%d %H:%M:%S')
+        
+        active_sessions.append({
+        "token": token, # 实际生产中不应暴露完整 token，只暴露摘要或 ID
+        "username": data.get("username"),
+        "role": data.get("role"),
+        "issued_at": issued_at,
+        "fingerprint": data.get("fingerprint") or "N/A"
+        })
+
+    return jsonify({
+        "count": len(active_sessions),
+        "sessions": active_sessions
+    })
+
+# 踢出登录
+@app.route("/admin/kick", methods=["POST"])
+def kick_user():
+    """强制让指定用户(session)下线"""
+    is_admin, err_resp, status_code = _check_admin()
+    if not is_admin:
+        return err_resp, status_code
+
+    data = request.get_json() or {}
+    target_token = data.get("token")
+
+    if not target_token:
+        return jsonify({"error": "Missing token parameter"}), 400
+
+    if target_token in SESSIONS:
+        # 从内存中移除该会话
+        popped = SESSIONS.pop(target_token)
+        print(f"[Admin] Kicked user: {popped.get('username')}")
+        return jsonify({"message": f"User {popped.get('username')} has been logged out."})
+    else:
+        return jsonify({"error": "Session not found or already expired"}), 404
+
+# 设置管理员
+@app.route("/admin/promote", methods=["POST"])
+def promote_user():
+  """API: Promote a user to admin role"""
+  # 1. 检查当前操作者是否是管理员
+  is_admin, err_resp, status_code = _check_admin()
+  if not is_admin:
+    return err_resp, status_code
+
+  # 2. 获取参数
+  data = request.get_json() or {}
+  target_username = data.get("username")
+
+  if not target_username:
+    return jsonify({"error": "Missing username parameter"}), 400
+
+  # 3. 修改数据库
+  session = get_db()
+  try:
+    user = session.query(User).filter_by(username=target_username).first()
+    if not user:
+      return jsonify({"error": "User not found"}), 404
+    
+    if user.role == "admin":
+      return jsonify({"message": f"User {target_username} is already an admin."})
+
+    # 更新角色
+    user.role = "admin"
+    session.commit()
+    
+    # 4. 同步更新内存中的在线会话状态，以便前端列表立即变色
+    # 注意：这不会改变用户手里已有的 JWT，用户下次登录才会真正拥有 admin 权限的 Token
+    # 如果想强制立即生效，可以配合 kick_user 强制他下线
+    for token, s_data in SESSIONS.items():
+      if s_data.get("username") == target_username:
+        s_data["role"] = "admin"
+    
+    return jsonify({"message": f"User {target_username} promoted to admin successfully."})
+    
+  except Exception as e:
+    session.rollback()
+    return jsonify({"error": f"Database error: {str(e)}"}), 500
+  finally:
+    session.close()
+
+# 删除管理权限
+@app.route("/admin/demote", methods=["POST"])
+def demote_user():
+    """API: Demote an admin back to student role"""
+    # 1. 检查操作者权限
+    is_admin, err_resp, status_code = _check_admin()
+    if not is_admin:
+        return err_resp, status_code
+
+    # 2. 获取当前操作者的用户名 (防止自己把自己降级)
+    # 从 cookie 或 header 中解析当前 session
+    current_token = request.cookies.get("sso_session") or request.headers.get("X-Session-Token")
+    current_session = SESSIONS.get(current_token)
+    operator_username = current_session.get("username")
+
+    # 3. 获取目标用户
+    data = request.get_json() or {}
+    target_username = data.get("username")
+
+    if not target_username:
+        return jsonify({"error": "Missing username parameter"}), 400
+
+    # 安全检查：禁止降级自己
+    if target_username == operator_username:
+        return jsonify({"error": f"You cannot demote yourself. {operator_username}"}), 400
+
+    # === 安全保障 3 (新增)：禁止降级初始超级管理员 ===
+    # 假设你的初始管理员账号叫 "admin"
+    if target_username == "admin":
+        return jsonify({"error": "Root admin cannot be demoted."}), 403
+    # 4. 修改数据库
+    session = get_db()
+    try:
+        user = session.query(User).filter_by(username=target_username).first()
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        if user.role != "admin":
+            return jsonify({"message": f"User {target_username} is not an admin."})
+
+        # === 核心逻辑：降级为 student ===
+        user.role = "student"
+        session.commit()
+        
+        # 5. 同步内存 Session (让前端列表立即变色)
+        for token, s_data in SESSIONS.items():
+            if s_data.get("username") == target_username:
+                s_data["role"] = "student"
+        
+        return jsonify({"message": f"User {target_username} demoted to student."})
+       
+        tokens_to_kick = []
+        for token, s_data in SESSIONS.items():
+            if s_data.get("username") == target_username:
+                tokens_to_kick.append(token)
+        
+        # 从内存中删除这些会话
+        for token in tokens_to_kick:
+            SESSIONS.pop(token, None)
+        
+        kick_count = len(tokens_to_kick)
+        return jsonify({
+            "message": f"User {target_username} demoted to student and logged out ({kick_count} sessions terminated)."
+        })
+        
+    except Exception as e:
+        session.rollback()
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
+    finally:
+        session.close()
 
 # 相当于ping，确认此服务器是否正在工作
 @app.route("/health", methods=["GET"])

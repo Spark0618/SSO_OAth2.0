@@ -438,8 +438,23 @@
                     <i class="fa fa-shield"></i>
                     <span>统一身份认证门户</span>
                 </div>
-                <div id="user-menu">{{ currentUser ? `当前用户: ${currentUser.username}` : '未登录' }}</div>
-            </div>
+                
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    
+                    <button 
+                        v-if="currentUser && currentUser.role === 'admin'" 
+                        @click="goToAdminPanel" 
+                        class="btn-sm danger" 
+                        style="padding: 6px 12px; font-size: 13px; box-shadow: none; border: 1px solid rgba(255,255,255,0.2);"
+                    >
+                        <i class="fa fa-gavel"></i> 管理用户
+                    </button>
+
+                    <div id="user-menu" style="font-size: 14px; opacity: 0.9;">
+                        {{ currentUser ? `当前用户: ${currentUser.username}` : '未登录' }}
+                    </div>
+                </div>
+                </div>
         </header>
 
         <main>
@@ -1039,6 +1054,10 @@ curl -v --cert certs/alice.crt --key certs/alice.key https://localhost:5000/heal
                     } finally {
                         this.isLoading = false;
                     }
+                },
+                // 跳转到管理员登录界面
+                goToAdminPanel() {
+                    window.location.href = "admin.html";
                 },
 
                 // 平台跳转（核心修复：与app.py的OAuth2.0授权流程完全适配）

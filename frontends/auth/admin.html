@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>SSO 管理后台</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #dc2626; /* 管理员用红色主题 */
+      --primary-light: #ef4444;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-700: #374151;
+      --gray-800: #1f2937;
+      --gray-900: #111827;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background-color: #f8fafc;
+      color: var(--gray-800);
+      margin: 0;
+    }
+
+    header {
+      background-color: var(--gray-900);
+      color: white;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand { font-size: 1.25rem; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+    .brand i { color: var(--primary-light); }
+
+    main { max-width: 1000px; margin: 2rem auto; padding: 0 1rem; }
+
+    .card {
+      background: white;
+      border-radius: 0.75rem;
+      box-shadow: var(--shadow);
+      padding: 1.5rem;
+      overflow: hidden;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    h2 { margin: 0; font-size: 1.5rem; }
+
+    button {
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      border: 1px solid var(--gray-200);
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+      background: white;
+      color: var(--gray-700);
+    }
+
+    button:hover { background: var(--gray-100); }
+    
+    button.danger {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    button.danger:hover { background: var(--primary-light); }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 1rem; border-bottom: 1px solid var(--gray-200); }
+    th { background: var(--gray-100); font-weight: 600; color: var(--gray-700); }
+    tr:last-child td { border-bottom: none; }
+    
+    .badge {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-admin { background: #fee2e2; color: #991b1b; }
+    .badge-student { background: #dbeafe; color: #1e40af; }
+    .badge-teacher { background: #d1fae5; color: #065f46; }
+
+    .empty { text-align: center; padding: 2rem; color: var(--gray-700); }
+    
+    .loading-overlay {
+      position: fixed; inset: 0; background: rgba(255,255,255,0.8);
+      display: flex; justify-content: center; align-items: center; z-index: 50;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="loading-overlay" v-if="loading">
+      <i class="fa fa-spinner fa-spin fa-2x"></i>
+    </div>
+
+    <header>
+      <div class="brand">
+        <i class="fa fa-gavel"></i>
+        <span>SSO 管理后台</span>
+      </div>
+      <div>
+        <span style="margin-right: 1rem;">{{ currentUser }}</span>
+        <button @click="logout" style="font-size: 0.8rem;">退出</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="card">
+        <div class="toolbar">
+          <h2>在线会话管理 ({{ sessions.length }})</h2>
+          <button @click="fetchSessions">
+            <i class="fa fa-refresh"></i> 刷新列表
+          </button>
+        </div>
+
+        <div v-if="error" style="background: #fee2e2; color: #b91c1c; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+          {{ error }}
+        </div>
+
+        <div v-if="sessions.length === 0 && !loading" class="empty">
+          暂无在线用户
+        </div>
+
+        <div style="overflow-x: auto;" v-else>
+          <table>
+            <thead>
+              <tr>
+                <th>用户</th>
+                <th>角色</th>
+                <th>登录时间</th>
+                <th>证书指纹</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="s in sessions" :key="s.token">
+                <td>
+                  <strong>{{ s.username }}</strong>
+                  <div style="font-size: 0.75rem; color: #6b7280; font-family: monospace;">
+                    {{ s.token.substring(0, 15) }}...
+                  </div>
+                </td>
+                <td>
+                  <span :class="['badge', 'badge-' + s.role]">{{ s.role }}</span>
+                </td>
+                <td>{{ s.issued_at }}</td>
+                <td style="font-family: monospace; font-size: 0.8rem;">
+                  {{ s.fingerprint === 'N/A' ? '-' : s.fingerprint.substring(0, 8) + '...' }}
+                </td>
+                <td>
+                  <div style="display: flex; gap: 5px;">
+                    
+                    <button class="danger" @click="kickUser(s)" v-if="s.token !== myToken" title="强制下线">
+                      <i class="fa fa-ban"></i>
+                    </button>
+
+                    <button 
+                      class="primary" 
+                      @click="promoteUser(s)" 
+                      v-if="s.role !== 'admin'"
+                      style="background-color: #10b981; border-color: #10b981; color: white;"
+                      title="设为管理员"
+                    >
+                      <i class="fa fa-arrow-up"></i>
+                    </button>
+                    <button 
+                      class="warning" 
+                      @click="demoteUser(s)" 
+                      v-if="s.role === 'admin' && s.token !== myToken"
+                      style="background-color: #f59e0b; border-color: #f59e0b; color: white;"
+                      title="取消管理员权限"
+                    >
+                      <i class="fa fa-arrow-down"></i>
+                    </button>
+                    <span v-if="s.token === myToken" style="color: #6b7280; font-size: 0.9rem;">(当前)</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+    createApp({
+      data() {
+        return {
+          base: "https://auth.localhost:5000",
+          sessions: [],
+          currentUser: "",
+          myToken: "", // 用于识别自己，避免把自己踢下线
+          loading: false,
+          error: null
+        }
+      },
+      mounted() {
+        this.checkAuth();
+      },
+      methods: {
+        async checkAuth() {
+          this.loading = true;
+          try {
+            // 先检查 Session 状态
+            const res = await fetch(`${this.base}/auth/session`, { credentials: "include" });
+            const data = await res.json();
+            
+            if (!res.ok || !data.active) {
+              window.location.href = "auth.html";
+              return;
+            }
+            
+            if (data.role !== "admin") {
+              alert("权限不足：仅管理员可访问此页面");
+              window.location.href = "auth.html";
+              return;
+            }
+
+            this.currentUser = data.username;
+            // 获取当前 cookie 中的 token，用于在列表中标识自己
+            this.myToken = this.getCookie("sso_session");
+            
+            await this.fetchSessions();
+          } catch (e) {
+            this.error = "连接服务器失败";
+          } finally {
+            this.loading = false;
+          }
+        },
+        async fetchSessions() {
+          this.loading = true;
+          this.error = null;
+          try {
+            const res = await fetch(`${this.base}/admin/sessions`, { credentials: "include" });
+            if (res.status === 401 || res.status === 403) {
+              this.error = "会话已过期或权限不足";
+              return;
+            }
+            const data = await res.json();
+            this.sessions = data.sessions || [];
+          } catch (e) {
+            this.error = "获取列表失败: " + e.message;
+          } finally {
+            this.loading = false;
+          }
+        },
+        async kickUser(session) {
+          if (!confirm(`确定要强制用户 ${session.username} 下线吗？`)) return;
+          
+          this.loading = true;
+          try {
+            const res = await fetch(`${this.base}/admin/kick`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ token: session.token })
+            });
+            
+            if (res.ok) {
+              // 成功后刷新列表
+              await this.fetchSessions();
+            } else {
+              const data = await res.json();
+              alert(data.error || "操作失败");
+            }
+          } catch (e) {
+            alert("请求错误");
+          } finally {
+            this.loading = false;
+          }
+        },
+        async promoteUser(session) {
+          if (!confirm(`确定要将用户 ${session.username} 提升为管理员吗？\n注意：用户需要重新登录后权限才会完全生效。`)) return;
+
+          this.loading = true;
+          try {
+            const res = await fetch(`${this.base}/admin/promote`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ username: session.username })
+            });
+
+            const data = await res.json();
+            
+            if (res.ok) {
+              alert(data.message);
+              // 刷新列表以看到角色变化
+              await this.fetchSessions();
+            } else {
+              alert(data.error || "操作失败");
+            }
+          } catch (e) {
+            alert("请求错误: " + e.message);
+          } finally {
+            this.loading = false;
+          }
+        },
+        async demoteUser(session) {
+          if (!confirm(`确定要取消用户 ${session.username} 的管理员权限吗？\n他将被降级为普通用户(student)。`)) return;
+
+          this.loading = true;
+          try {
+            const res = await fetch(`${this.base}/admin/demote`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ username: session.username })
+            });
+
+            const data = await res.json();
+            
+            if (res.ok) {
+              alert(data.message);
+              await this.fetchSessions(); // 刷新列表
+            } else {
+              alert(data.error || "操作失败");
+            }
+          } catch (e) {
+            alert("请求错误: " + e.message);
+          } finally {
+            this.loading = false;
+          }
+        },
+        async logout() {
+          await fetch(`${this.base}/auth/logout`, { method: "POST", credentials: "include" });
+          window.location.href = "auth.html";
+        },
+        getCookie(name) {
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+      }
+    }).mount("#app");
+  </script>
+</body>
+</html>

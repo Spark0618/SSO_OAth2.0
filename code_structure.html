@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSO OAuth2.0 学术系统 - 后端代码结构详解</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #f0f0f0;
+            flex-wrap: wrap;
+        }
+        
+        .tab-btn {
+            padding: 12px 24px;
+            background: #f5f5f5;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 1em;
+            color: #666;
+            transition: all 0.3s;
+        }
+        
+        .tab-btn.active {
+            background: #667eea;
+            color: white;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab-btn:hover {
+            background: #e0e0e0;
+        }
+        
+        .tab-btn.active:hover {
+            background: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .module-section {
+            margin-bottom: 40px;
+        }
+        
+        .module-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .module-icon {
+            font-size: 1.3em;
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .file-card {
+            background: #f9f9f9;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        
+        .file-card:hover {
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+            transform: translateX(5px);
+        }
+        
+        .file-name {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .file-icon {
+            font-size: 1.2em;
+        }
+        
+        .file-description {
+            color: #666;
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        
+        .file-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .detail-item {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        .detail-label {
+            color: #999;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        
+        .detail-content {
+            color: #333;
+        }
+        
+        .responsibility-list {
+            margin-top: 12px;
+        }
+        
+        .responsibility-title {
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+        
+        .responsibility-list ul {
+            list-style: none;
+            padding-left: 20px;
+        }
+        
+        .responsibility-list li {
+            position: relative;
+            margin-bottom: 6px;
+            color: #555;
+            font-size: 0.9em;
+        }
+        
+        .responsibility-list li:before {
+            content: "→";
+            position: absolute;
+            left: -15px;
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+        
+        .badge-core {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        .badge-db {
+            background: #4ecdc4;
+            color: white;
+        }
+        
+        .badge-service {
+            background: #45b7d1;
+            color: white;
+        }
+        
+        .badge-util {
+            background: #f7b731;
+            color: white;
+        }
+        
+        .badge-monitor {
+            background: #5f27cd;
+            color: white;
+        }
+        
+        .architecture-diagram {
+            background: #f9f9f9;
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .summary-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-box h3 {
+            margin-bottom: 10px;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        footer {
+            background: #f5f5f5;
+            padding: 20px;
+            text-align: center;
+            color: #999;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .error {
+            color: #ff6b6b;
+        }
+        
+        .success {
+            color: #51cf66;
+        }
+        
+        .warning {
+            color: #ffd93d;
+        }
+        
+        @media (max-width: 768px) {
+            .file-details {
+                grid-template-columns: 1fr;
+            }
+            
+            header h1 {
+                font-size: 1.8em;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏛️ SSO OAuth2.0 学术信息系统</h1>
+            <p>后端服务架构与代码结构完整解析</p>
+        </header>
+        
+        <div class="content">
+            <!-- 统计摘要 -->
+            <div class="summary-box">
+                <h3>📊 项目统计概览</h3>
+                <div class="summary-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">26</div>
+                        <div class="stat-label">核心模块文件</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">3</div>
+                        <div class="stat-label">微服务应用</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">20+</div>
+                        <div class="stat-label">数据库模型</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">100+</div>
+                        <div class="stat-label">API端点</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 标签页 -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('overview')">总体概览</button>
+                <button class="tab-btn" onclick="switchTab('common')">通用模块</button>
+                <button class="tab-btn" onclick="switchTab('auth')">认证服务</button>
+                <button class="tab-btn" onclick="switchTab('academic')">学术系统</button>
+                <button class="tab-btn" onclick="switchTab('cloud')">云存储服务</button>
+                <button class="tab-btn" onclick="switchTab('features')">功能模块</button>
+            </div>
+            
+            <!-- 总体概览 -->
+            <div id="overview" class="tab-content active">
+                <div class="module-section">
+                    <div class="module-title">
+                        <div class="module-icon">🗂️</div>
+                        <span>系统架构总体设计</span>
+                    </div>
+                    
+                    <div class="architecture-diagram">
+                        <h4>微服务架构</h4>
+                        <pre style="text-align: left; background: white; padding: 15px; border-radius: 4px; overflow: auto;">
+┌─────────────────────────────────────────────────────────────────┐
+│                     前端应用 (SPA)                               │
+│          Academic / Auth / Cloud Frontends                       │
+└──────────┬──────────────────┬─────────────────────┬──────────────┘
+           │                  │                     │
+      ┌────▼────┐        ┌────▼────┐        ┌─────▼─────┐
+      │ Auth    │        │Academic │        │  Cloud    │
+      │ Server  │        │ API     │        │  API      │
+      │(5000)   │        │(5001)   │        │  (5002)   │
+      └────┬────┘        └────┬────┘        └─────┬─────┘
+           │                  │                    │
+           └──────────────────┼────────────────────┘
+                    ┌─────────▼─────────┐
+                    │  MySQL Database   │
+                    │   (Shared DB)     │
+                    └───────────────────┘
+                    
+通用层 (Common):
+  ├── config.py           # 配置管理
+  ├── database.py         # 数据库驱动
+  ├── security.py         # 安全工具
+  ├── base_app.py         # Flask基础应用
+  └── api_utils.py        # API工具
+                        </pre>
+                    </div>
+                </div>
+                
+                <div class="module-section">
+                    <div class="module-title">
+                        <div class="module-icon">📋</div>
+                        <span>核心文件清单</span>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>分类</th>
+                                    <th>文件名</th>
+                                    <th>核心职责</th>
+                                    <th>关键类/函数</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="badge badge-util">通用</span></td>
+                                    <td><strong>common/config.py</strong></td>
+                                    <td>统一配置管理，支持多应用配置切换</td>
+                                    <td>ConfigManager, AppConfig, DatabaseConfig</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge badge-db">数据库</span></td>
+                                    <td><strong>common/database.py</strong></td>
+                                    <td>数据库连接池、会话管理、查询执行</td>
+                                    <td>DatabaseManager, QueryStats</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge badge-util">安全</span></td>
+                                    <td><strong>common/security.py</strong></td>
+                                    <td>JWT生成验证、密码哈希、权限检查</td>
+                                    <td>SecurityUtils, @require_auth, @require_roles</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge badge-core">核心</span></td>
+                                    <td><strong>common/base_app.py</strong></td>
+                                    <td>Flask应用基类，初始化所有组件</td>
+                                    <td>BaseApp, _init_database, _init_cors</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge badge-core">核心</span></td>
+                                    <td><strong>auth-server/app.py</strong></td>
+                                    <td>OAuth2.0认证服务器实现</td>
+                                    <td>登录、授权、令牌颁发</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge badge-core">核心</span></td>
+                                    <td><strong>academic-api/models.py</strong></td>
+                                    <td>SQLAlchemy数据库模型定义</td>
+                                    <td>User, Student, Course, Assignment等20+表</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge badge-service">服务</span></td>
+                                    <td><strong>academic-api/app.py</strong></td>
+                                    <td>学术系统主应用程序</td>
+                                    <td>API路由、数据库初始化</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 通用模块 -->
+            <div id="common" class="tab-content">
+                <div class="module-section">
+                    <div class="module-title">
+                        <div class="module-icon">⚙️</div>
+                        <span>通用模块 (Common)</span>
+                    </div>
+                    <p style="color: #666; margin-bottom: 20px;">这些模块提供项目级别的通用功能，被所有微服务共享。</p>
+                    
+                    <div class="file-card">
+                        <div class="file-name">
+                            <span class="file-icon">📄</span>
+                            config.py
+                        </div>
+                        <div class="file-description">
+                            应用配置管理器，采用数据类模式定义配置结构，支持多个应用的配置独立管理和环境变量覆盖。
+                        </div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <div class="detail-label">核心类</div>
+                                <div class="detail-content">
+                                    ConfigManager, AppConfig, DatabaseConfig, AuthConfig, StorageConfig
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">关键方法</div>
+                                <div class="detail-content">
+                                    load_config(), get_config(), _load_configs()
+                                </div>
+                            </div>
+                        </div>
+                        <div class="responsibility-list">
+                            <div class="responsibility-title">核心职责：</div>
+                            <ul>
+                                <li>统一管理全局配置（数据库、认证、存储、速率限制等）</li>
+                                <li>支持环境变量覆盖，便于容器化部署</li>
+                                <li>为三个微服务（auth、academic、cloud）提供独立配置</li>
+                                <li>数据库URL、证书路径等敏感信息的安全管理</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="file-card">
+                        <div class="file-name">
+                            <span class="file-icon">🗄️</span>
+                            database.py
+                        </div>
+                        <div class="file-description">
+                            提供优化的数据库连接和查询管理，采用SQLAlchemy 2.0 API，支持连接池、会话管理、缓存和性能统计。
+                        </div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <div class="detail-label">核心类</div>
+                                <div class="detail-content">
+                                    DatabaseManager, QueryStats
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">关键功能</div>
+                                <div class="detail-content">
+                                    execute_query, execute_update, execute_batch, 缓存操作, 性能监控
+                                </div>
+                            </div>
+                        </div>
+                        <div class="responsibility-list">
+                            <div class="responsibility-title">核心职责：</div>
+                            <ul>
+                                <li>初始化SQLAlchemy引擎和连接池（QueuePool）</li>
+                                <li>提供Session管理的上下文管理器（get_session）</li>
+                                <li>执行查询（支持单条、全部、单条返回）和批量操作</li>
+                                <li>缓存支持（Redis集成）</li>
+                                <li>收集查询统计信息，记录慢查询</li>
+                                <li>连接池状态监控和诊断</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="file-card">
+                        <div class="file-name">
+                            <span class="file-icon">🔐</span>
+                            security.py
+                        </div>
+                        <div class="file-description">
+                            提供应用级安全功能，包括JWT生成验证、密码哈希、权限检查、输入验证等，支持mTLS证书验证。
+                        </div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <div class="detail-label">核心类</div>
+                                <div class="detail-content">
+                                    SecurityUtils, RateLimiter
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">装饰器</div>
+                                <div class="detail-content">
+                                    @require_auth, @require_roles, @rate_limit, @cache_response
+                                </div>
+                            </div>
+                        </div>
+                        <div class="responsibility-list">
+                            <div class="responsibility-title">核心职责：</div>
+                            <ul>
+                                <li>JWT令牌生成和验证（支持自定义密钥和算法）</li>
+                                <li>PBKDF2密码哈希和验证，支持盐值</li>
+                                <li>生成安全的随机令牌和会话ID</li>
+                                <li>基于角色的访问控制（RBAC）</li>
+                                <li>API速率限制装饰器实现</li>
+                                <li>输入验证和XSS防护</li>
+                                <li>mTLS客户端证书验证</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="file-card">
+                        <div class="file-name">
+                            <span class="file-icon">🚀</span>
+                            base_app.py
+                        </div>
+                        <div class="file-description">
+                            Flask应用基类，封装了应用初始化逻辑，包括配置、日志、数据库、文件处理、监控、CORS等，所有微服务都从该类继承。
+                        </div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <div class="detail-label">核心类</div>
+                                <div class="detail-content">
+                                    BaseApp
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">初始化方法</div>
+                                <div class="detail-content">
+                                    _init_config, _init_app, _init_database, _init_monitoring
+                                </div>
+                            </div>
+                        </div>
+                        <div class="responsibility-list">
+                            <div class="responsibility-title">核心职责：</div>
+                            <ul>
+                                <li>统一的应用初始化流程</li>
+                                <li>配置、日志、数据库、安全、文件处理等组件的初始化</li>
+                                <li>CORS跨域资源共享配置</li>
+                                <li>全局错误处理器注册</li>
+                                <li>请求前后的钩子处理（计时、审计等）</li>
+                                <li>系统监控和资源管理初始化</li>
+                                <li>优雅关闭（cleanup）</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="file-card">
+                        <div class="file-name">
+                            <span class="file-icon">🛠️</span>
+                            api_utils.py
+                        </div>
+                        <div class="file-description">
+                            API工具和辅助函数库，提供标准化的API响应格式、分页、缓存、错误处理等。
+                        </div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <div class="detail-label">核心功能</div>
+                                <div class="detail-content">
+                                    APIResponse, APIError, paginate, cache_response, error_handler
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">设计模式</div>
+                                <div class="detail-content">
+                                    装饰器模式、工厂模式
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 认证服务 -->
+            <div id="auth" class="tab-content">
+                <div class="module-section">
+                    <div class="module-title">
+                        <div class="module-icon">🔑</div>
+                        <span>认证服务 (Auth Server)</span>
+                    </div>
+                    <p style="color: #666; margin-bottom: 20px;">OAuth2.0 认证授权服务器，负责用户登录、令牌颁发和验证。</p>
+                    
+                    <div class="file-card">
+                        <div class="file-name">
+                            <span class="file-icon">📱</span>
+                            app.py
+                        </div>
+                        <div class="file-description">
+                            认证服务主程序，实现了完整的OAuth2.0流程：用户注册、登录、授权码生成、令牌颁发、令牌刷新等。采用Flask框架，数据存储在MySQL中。
+                        </div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <div class="detail-label">服务端口</div>
+                                <div class="detail-content">
+                                    5000（HTTPS）
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">关键API端点</div>
+                                <div class="detail-content">
+                                    /session/*, /oauth/*, /api/admin/*
+                                </div>
+                            </div>
+                        </div>
+                        <div class="responsibility-list">
+                            <div class="responsibility-title">核心职责：</div>
+                            <ul>
+                                <li><strong>用户管理：</strong>用户注册（支持学生和教师角色）</li>
+                                <li><strong>身份验证：</strong>用户登录、密码验证（Werkzeug安全模式）</li>
+                                <li><strong>OAuth2.0流程：</strong>授权码流(Authorization Code Flow)实现</li>
+                                <li><strong>令牌颁发：</strong>生成JWT访问令牌和刷新令牌</li>
+                                <li><strong>令牌验证：</strong>验证令牌有效性，刷新过期令牌</li>
+                                <li><strong>客户端管理：</strong>管理OAuth2.0客户端（academic-app, cloud-app）</li>
+                                <li><strong>mTLS支持：</strong>客户端证书指纹验证</li>
+                                <li><strong>会话管理：</strong>会话生命周期管理</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 学术系统 -->
+            <div id="academic" class="tab-content">
+                <div class="module-section">
+                    <div class="module-title">
+                        <div class="module-icon">🎓</div>
+                        <span>学术系统 (Academic API)</span>
+                    </div>
+                    <p style="color: #666; margin-bottom: 20px;">学术信息管理系统核心应用，处理课程、作业、成绩等业务逻辑。</p>
+                    
+                    <div class="file-card">
+                        <div class="file-name">
+                            <span class="file-icon">📊</span>
+                            models.py
+                        </div>
+                        <div class="file-description">
+                            SQLAlchemy ORM模型定义，包含20+个数据库表的映射类。采用关系型设计，支持复杂业务关系。
+                        </div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <div class="detail-label">表数量</div>
+                                <div class="detail-content">
+                                    20+ 个表
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">主要类</div>
+                                <div class="detail-content">
+                                    User, Student, Teacher, Course, Assignment等
+                                </div>
+                            </div>
+                        </div>
+                        <div class="responsibility-list">
+                            <div class="responsibility-title">核心表结构：</div>
+                            <ul>
+                                <li><strong>用户管理：</strong>User（用户基类）, Student（学生）, Teacher（教师）</li>
+                                <li><strong>课程管理：</strong>Course（课程）, Enrollment（选课）, CourseSchedule（课表）</li>
+                                <li><strong>作业系统：</strong>Assignment（作业）, AssignmentSubmission（提交）, SubmissionFile（提交文件）</li>
+                                <li><strong>资源管理：</strong>CourseResource（课程资源）, ResourceTag（标签）, AssignmentResource（作业资源）</li>
+                                <li><strong>通知系统：</strong>Notification（通知）, CourseAnnouncement（公告）</li>
+                                <li><strong>监控审计：</strong>LoginLog（登录日志）, StudyLog（学习日志）, EnrollmentRequest（选课申请）</li>
+                                <li><strong>系统配置：</strong>SystemConfig（系统配置）</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="file-card">
+                        <div class="file-name">
+                            <span class="file-icon">🚀</span>
+                            app.py
+                        </div>
+                        <div class="file-description">
+                            学术系统主程序，实现了RESTful API接口，整合了所有业务模块。采用蓝图模式组织路由，支持WebSocket实时通讯。
+                        </div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <div class="detail-label">服务端口</div>
+                                <div class="detail-content">
+                                    5001（HTTPS）
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">关键模块</div>
+                                <div class="detail-content">
+                                    routes, backup_routes, notification_routes等
+                                </div>
+                            </div>
+                        </div>
+                        <div class="responsibility-list">
+                            <div class="responsibility-title">核心职责：</div>
+                            <ul>
+                                <li>主Flask应用程序初始化</li>
+                                <li>数据库连接池管理和会话工厂创建</li>
+                                <li>蓝图(Blueprint)注册和路由整合</li>
+                                <li>OAuth2.0令牌验证中间件</li>
+                                <li>WebSocket支持（实时通知）</li>
+                                <li>性能监控和缓存集成</li>
+                                <li>备份和恢复功能集成</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="file-card">
+                        <div class="file-name">
+                            <span class="file-icon">🛣️</span>
+                            routes.py
+                        </div>
+                        <div class="file-description">
+                            RESTful API路由主模块，定义了所有业务API端点，包括用户、课程、作业、成绩等操作。采用蓝图模式，支持分层组织。
+                        </div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <div class="detail-label">路由前缀</div>
+                                <div class="detail-content">
+                                    /api/v1/*
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">端点数量</div>
+                                <div class="detail-content">
+                                    100+ 个API端点
+                                </div>
+                            </div>
+                        </div>
+                        <div class="responsibility-list">
+                            <div class="responsibility-title">核心职责：</div>
+                            <ul>
+                                <li>用户信息查询和修改</li>
+                                <li>课程列表、详情、选课管理</li>
+                                <li>作业发布、查看、提交、批改</li>
+                                <li>成绩查询和评分管理</li>
+                                <li>公告查看和发布</li>
+                                <li>资源下载和管理</li>
+                                <li>课表查询和时间表管理</li>
+                                <li>权限检查和数据验证</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 云存储服务 -->
+            <div id="cloud" class="tab-content">
+                <div class="module-section">
+                    <div class="module-title">
+                        <div class="module-icon">☁️</div>
+                        <span>云存储服务 (Cloud API)</span>
+                    </div>
+                    <p style="color: #666; margin-bottom: 20px;">专门用于文件管理和存储的微服务，支持文件上传、下载、分享。</p>
+                    
+                    <div class="file-card">
+                        <div class="file-name">
+                            <span class="file-icon">📁</span>
+                            app.py / app_refactored.py
+                        </div>
+                        <div class="file-description">
+                            云存储API应用，提供文件上传、下载、列表、删除等功能。新版本采用BaseApp基类改进架构。
+                        </div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <div class="detail-label">服务端口</div>
+                                <div class="detail-content">
+                                    5002（HTTPS）
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">主要端点</div>
+                                <div class="detail-content">
+                                    /api/files/*, /session/*, /downloads/*
+                                </div>
+                            </div>
+                        </div>
+                        <div class="responsibility-list">
+                            <div class="responsibility-title">核心职责：</div>
+                            <ul>
+                                <li>文件上传管理（支持大文件、断点续传）</li>
+                                <li>文件下载和流式传输</li>
+                                <li>文件列表和搜索</li>
+                                <li>文件元数据管理（大小、类型、创建时间等）</li>
+                                <li>文件权限控制（公开/私有）</li>
+                                <li>文件分享和访问链接</li>
+                                <li>支持标签和分类</li>
+                                <li>存储空间统计</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 功能模块 -->
+            <div id="features" class="tab-content">
+                <div class="module-section">
+                    <div class="module-title">
+                        <div class="module-icon">⚡</div>
+                        <span>功能增强模块 (Academic API)</span>
+                    </div>
+                    <p style="color: #666; margin-bottom: 20px;">学术系统中的各种增强功能模块，提供特定业务能力。</p>
+                    
+                    <div class="file-card">
+                        <div class="file-name">
+                            <span class="file-icon">💾</span>
+                            backup_manager.py
+                        </div>
+                        <div class="file-description">
+                            数据备份和恢复管理器，提供数据库和文件的备份功能，支持压缩和定时备份。
+                        </div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <div class="detail-label">核心类</div>
+                                <div class="detail-content">
+                                    BackupManager
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">主要功能</div>
+                                <div class="detail-content">
+                                    create_backup, restore_backup, export_data
+                                </div>
+                            </div>
+                        </div>
+                        <div class="responsibility-list">
+                            <div class="responsibility-title">核心职责：</div>
+                            <ul>
+                                <li>数据库结构备份（DDL导出）</li>
+                                <li>数据库数据备份（DML导出）</li>
+                                <li>上传文件备份</li>
+                                <li>元数据记录</li>
+                                <li>备份压缩（ZIP格式）</li>
+                                <li>备份恢复功能</li>
+                                <li>备份版本管理</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="file-card">
+                        <div class="file-name">
+                            <span class="file-icon">📈</span>
+                            performance_monitor.py
+                        </div>
+                        <div class="file-description">
+                            性能监控和分析模块，收集API响应时间、数据库查询性能、缓存命中率等指标。
+                        </div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <div class="detail-label">核心类</div>
+                                <div class="detail-content">
+                                    PerformanceMonitor, MetricsCollector, SystemMonitor
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">监控指标</div>
+                                <div class="detail-content">
+                                    API响应时间、DB查询时间、缓存命中率、系统资源
+                                </div>
+                            </div>
+                        </div>
+                        <div class="responsibility-list">
+                            <div class="responsibility-title">核心职责：</div>
+                            <ul>
+                                <li>API调用性能记录（端点、方法、状态码、响应时间）</li>
+                                <li>数据库查询性能监控</li>
+                                <li>缓存命中率统计</li>
+                                <li>系统资源监控（CPU、内存、磁盘）</li>
+                                <li>慢查询检测和告警</li>
+                                <li>性能数据聚合和分析</li>
+                                <li>性能报告生成</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="file-card">
+                        <div class="file-name">
+                            <span class="file-icon">🔔</span>
+                            notifications.py
+                        </div>
+                        <div class="file-description">
+                            实时通知和消息推送系统，支持多种通知渠道（应用内、Email、SMS、WebSocket）。
+                        </div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <div class="detail-label">核心类</div>
+                                <div class="detail-content">
+                                    Notification, NotificationService, NotificationChannel
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">通知类型</div>
+                                <div class="detail-content">
+                                    系统、课程、作业、成绩、消息、提醒
+                                </div>
+                            </div>
+                        </div>
+                        <div class="responsibility-list">
+                            <div class="responsibility-title">核心职责：</div>
+                            <ul>
+                                <li>通知创建和发送</li>
+                                <li>多渠道通知支持（应用内、邮件、短信、WebSocket）</li>
+                                <li>通知优先级管理</li>
+                                <li>通知状态追踪（待发送、已发送、已送达、已读）</li>
+                                <li>通知过期处理</li>
+                                <li>用户通知偏好设置</li>
+                                <li>批量通知发送</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="file-card">
+                        <div class="file-name">
+                            <span class="file-icon">🔍</span>
+                            query_optimizer.py
+                        </div>
+                        <div class="file-description">
+                            数据库查询优化器，分析慢查询，提供优化建议，支持查询缓存。
+                        </div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <div class="detail-label">核心类</div>
+                                <div class="detail-content">
+                                    QueryOptimizer, QueryAnalyzer
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">优化方式</div>
+                                <div class="detail-content">
+                                    缓存、索引建议、查询改写
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="file-card">
+                        <div class="file-name">
+                            <span class="file-icon">📝</span>
+                            audit_logger.py
+                        </div>
+                        <div class="file-description">
+                            审计日志系统，记录所有重要操作（创建、修改、删除、导出等）以便进行安全审计和合规检查。
+                        </div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <div class="detail-label">核心类</div>
+                                <div class="detail-content">
+                                    AuditLogger, AuditEventType
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">记录信息</div>
+                                <div class="detail-content">
+                                    用户、时间、操作、资源、结果、IP等
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="file-card">
+                        <div class="file-name">
+                            <span class="file-icon">💾</span>
+                            cache.py
+                        </div>
+                        <div class="file-description">
+                            缓存管理模块，支持内存缓存和Redis分布式缓存，提供统一的缓存接口。
+                        </div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <div class="detail-label">核心类</div>
+                                <div class="detail-content">
+                                    CacheManager, RedisCache
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">操作</div>
+                                <div class="detail-content">
+                                    get, set, delete, clear, pattern-delete
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="file-card">
+                        <div class="file-name">
+                            <span class="file-icon">✅</span>
+                            validation.py
+                        </div>
+                        <div class="file-description">
+                            数据验证和清理模块，对用户输入进行验证和XSS防护，确保数据安全。
+                        </div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <div class="detail-label">核心类</div>
+                                <div class="detail-content">
+                                    DataValidator, SecurityChecker
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">验证类型</div>
+                                <div class="detail-content">
+                                    邮件、URL、日期、数字、长度、模式等
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>生成时间：<span id="generateTime"></span></p>
+            <p>系统架构: 微服务 + OAuth2.0 + 共享数据库</p>
+        </footer>
+    </div>
+    
+    <script>
+        function switchTab(tabName) {
+            // 隐藏所有标签页
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 移除所有按钮的active类
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 显示选中的标签页
+            document.getElementById(tabName).classList.add('active');
+            
+            // 为选中的按钮添加active类
+            event.target.classList.add('active');
+        }
+        
+        // 设置生成时间
+        document.getElementById('generateTime').textContent = new Date().toLocaleString('zh-CN');
+    </script>
+</body>
+</html>
